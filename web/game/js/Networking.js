@@ -19,6 +19,8 @@ define([
 
             this.world.placeBombs.on('add', this.requestPlaceBomb, this);
 
+            this.world.placePowerups.on('add', this.addPowerup, this);
+
             //this.socket = io.connect(window.location.protocol + '//' + window.location.hostname + ':' + window.location.port + '/' + opt.game);
             this.socket = io.connect('/' + opt.game);
 
@@ -38,6 +40,7 @@ define([
             this.socket.on('friend-scores', $.proxy(this.onFriendScoreUpdates, this));
 
             this.socket.on('bomb-placed', $.proxy(this.onBombPlaced, this));
+            this.socket.on('powerup', $.proxy(this.onPowerupSpawned, this));
             this.socket.on('bomb-boomed', $.proxy(this.onBombBoomed, this));
 
             this.socket.on('break-tiles', $.proxy(this.onTilesBroke, this));
@@ -50,6 +53,17 @@ define([
                 this.world.players.remove(p);
             }, this));
             this.peers = {};
+        },
+
+        addPowerup: function (p) {
+          console.log('spawn powerup from networking');
+          this.socket.emit('spawn-powerup', {x: p.get('x'), y: p.get('y')});
+          this.world.placePowerups.remove(p); 
+        },
+
+        onPowerupSpawned: function (p) {
+          console.log('full circle')
+          this.world.powerups.add(new Powerup({x: p.x, y: p.y, type: p.type}));
         },
 
         onGameJoin: function(d) {
@@ -193,6 +207,7 @@ define([
 
         requestPlaceBomb: function(b) {
             this.socket.emit('put-bomb', {x: b.get('x'), y: b.get('y')});
+              console.log('emitting put bomb')
             this.world.placeBombs.remove(b);
         },
 

@@ -20,6 +20,8 @@
 
         bombs: null,
 
+        powerups: null,
+
         initialize: function(opt) {
             this.redis = opt.redis;
 
@@ -31,6 +33,9 @@
 
             this.bombs = new BombCollection();
             this.bombs.on('add', this.onBombAdded, this);
+
+            this.powerups = new PowerupCollection();
+            this.powerups.on('add', this.onPowerupAdded, this);
 
             // TODO move outside game
             this.lastTick = getTicks();
@@ -74,6 +79,10 @@
                 timePlaced: this.lastTick,
                 timeTrigger: this.lastTick + b.get('fuseTime')
             });
+        },
+
+        onPowerupAdded: function (p) {
+          console.log('powerup added event'); 
         },
 
         _chainBombs: function(b) {

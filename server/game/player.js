@@ -77,6 +77,7 @@
             this.socket.on('dead', _.bind(this.onDead, this));
             this.socket.on('disconnect', _.bind(this.onDisconnect, this));
             this.socket.on('put-bomb', _.bind(this.onPlaceBomb, this));
+            this.socket.on('spawn-powerup', _.bind(this.onPowerup, this));
             this.socket.on('chat', _.bind(this.onChat, this));
             this.socket.on('pong', _.bind(this.onPong, this));
 
@@ -141,6 +142,12 @@
             } else {
                 console.log('A bomb at ' + d.x + ", " + d.y + " already exists!");
             }
+        },
+
+        onPowerup: function(p) {
+          console.log('spawning powerup on server');
+          this.game.powerups.add(new Powerup({x: p.x, y: p.y, type: p.type}));
+          this.endpoint.emit('powerup', {x: p.x, y: p.y, type: p.type});
         },
 
         onChat: function(d) {

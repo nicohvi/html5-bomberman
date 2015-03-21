@@ -1,6 +1,6 @@
-
-
 (function() {
+
+    const POWERUPS = ['CD'];
 
     Bomb = Backbone.Model.extend({
         defaults: {
@@ -16,6 +16,18 @@
 
 
     BombCollection = Backbone.Collection.extend({
+    });
+
+    PowerupCollection = Backbone.Collection.extend({});
+
+    Powerup = Backbone.Model.extend({
+      
+      defaults: {
+        x: 0,
+        y: 0,
+        type: POWERUPS[0]
+      }    
+
     });
 
 

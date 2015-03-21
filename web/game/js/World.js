@@ -5,12 +5,12 @@ define([
 
     "Map",
     "Bomb",
+    "Powerup",
     "Flame",
     "Character",
 
     "GameCanvas"
 ],function($, _, Backbone, core) {
-
 
     var ortho = [
         {x:0, y:0, d: 0 },
@@ -41,6 +41,8 @@ define([
             this.remove(b);
         }
     });
+
+    PowerupsCollection = Backbone.Collection.extend({});
 
     FlamesCollection = Backbone.Collection.extend({
         initialize: function() {
@@ -79,6 +81,9 @@ define([
         flames: new FlamesCollection(),
         breakings: new BreakersCollection(),
 
+        powerups: new PowerupsCollection,
+        placePowerups: new PowerupsCollection,
+
         /** obsolete, NPC players */
         npcs: [],
 
@@ -92,6 +97,8 @@ define([
 
             this.bombs.on('add', this.onBombAdded, this);
             this.bombs.on('remove', this.onBombRemoved, this);
+            
+            this.breakings.on('remove', this.onBreakingRemoved, this);
 
             this.flames.on('remove', this.onFlameRemoved, this);
 
@@ -106,6 +113,10 @@ define([
             this.updateScoring(true);
         },
 
+        onBreakingRemoved: function (b) {
+          this.placePowerups.add(new Powerup({ x: b.get('x'), y: b.get('y') }));
+        },
+ 
         /** bombs */
         placeBomb: function(x, y) {
             // add on temporary queue
