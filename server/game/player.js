@@ -1,14 +1,12 @@
-
-
 (function() {
-
 
     Player = Backbone.Model.extend({
 
         defaults: {
             alive: false,
             spawnAt: 0,
-            score: 0
+            score: 0,
+            coolDown: { state: false, last: new Date() }
         },
 
         initialize: function() {
@@ -20,6 +18,7 @@
             this.set('y', d.y);
             this.set('o', d.o);
             this.set('m', d.m);
+            this.updateCooldown();
         },
 
         getUpdate: function() {
@@ -44,7 +43,24 @@
 
         die: function() {
             this.set('alive', false);
+        },
+
+        coolingDown: function() {
+          return this.get('coolDown').state;
+        },
+
+        coolDown: function() {
+          this.set('coolDown', { state: true, last: new Date() });
+        },
+
+        updateCooldown: function() {
+          // TODO: Move to constant
+          var now = new Date();
+          if( (now - this.get('coolDown').last) > 1000 && this.coolingDown()) {
+            this.set('coolDown', { state: false, last: now });
+          }
         }
+
     });
 
 
@@ -115,12 +131,13 @@
 //            console.log('Placing bomb at ' + d.x + ", " + d.y);
 
             // can place bomb there?
-            if (!this.game.bombs.any(function(b) { return b.get('x') == d.x && b.get('y') == d.y; }))
+            if (!this.game.bombs.any(function(b) { return b.get('x') == d.x && b.get('y') == d.y; }) && !this.me.coolingDown())
             {
                 // no bomb here
                 this.game.bombs.add(new Bomb({x: d.x, y: d.y, owner: this.id}));
                 // notify everyone
                 this.endpoint.emit('bomb-placed', {x: d.x, y: d.y, owner: this.id});
+                this.me.coolDown();
             } else {
                 console.log('A bomb at ' + d.x + ", " + d.y + " already exists!");
             }
