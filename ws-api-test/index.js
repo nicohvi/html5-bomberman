@@ -3,14 +3,19 @@ var Characters = require('./lib/chars')();
 
 bomberman.join('Seal', Characters.Mary);
 
-setInterval(function() { bomberman.moveUp() }, 5000)
 
-setTimeout(function() {
-  setInterval(function() { bomberman.moveDown() }, 5000)
-}, 2500);
+var dir = 'u';
+
+
+setInterval(function() { 
+  if (dir === 'd') {
+    bomberman.moveDown();
+  } else {
+    bomberman.moveUp();
+  }
+}, 17)
 
 
 setInterval(function() {
-  bomberman.placeBomb();
-}, 2500);
+}, 5000);
 
