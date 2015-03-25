@@ -1,5 +1,4 @@
 var io = require('socket.io-client')
-var express = require('express');
 var _ = require('lodash');
 
 //var bomberman = io.connect('ws://mac-nicolayhvidtsten:8080/'); 
@@ -72,5 +71,4 @@ setTimeout(function() {
   game.emit('dead', { id: gameId, flameOwner: gameId})
 }, 5000);
 
-var app = express();
 
