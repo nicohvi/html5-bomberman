@@ -9,3 +9,8 @@ setTimeout(function() {
   setInterval(function() { bomberman.moveDown() }, 5000)
 }, 2500);
 
+
+setInterval(function() {
+  bomberman.placeBomb();
+}, 2500);
+
