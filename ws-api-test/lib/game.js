@@ -1,8 +1,8 @@
 var io = require('socket.io-client');
 var _ = require('lodash');
 
-module.exports = function() {
-  var bomberman = io.connect('ws://localhost:8080/'); 
+module.exports = function(url) {
+  var bomberman = io.connect(url); 
   var game = bomberman.of('/game1');
 
 
@@ -46,7 +46,6 @@ module.exports = function() {
     d.forEach(function(tile) {
       var x = tile.x;
       var y = tile.y;
-      map[y][x] = 0;
     });
   });
 
