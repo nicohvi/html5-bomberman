@@ -94,6 +94,11 @@ module.exports = function(url) {
   this.moveRight = function() {
     move('r');
   }
+
+  this.placeBomb = function() {
+    var place = { x: Math.floor(cord.x), y: Math.floor(cord.y) };
+    game.emit('put-bomb', place);
+  }
   
   return this;
 }
