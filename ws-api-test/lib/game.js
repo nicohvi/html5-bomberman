@@ -53,11 +53,12 @@ module.exports = function(url) {
     console.log('you were disconnected');
   });
 
+  var STEP_SIZE = 0.25;
   var moveCord = function(dir) {
-    if      (dir === 'u')  cord.y = cord.y - 1;
-    else if (dir === 'd')  cord.y = cord.y + 1;
-    else if (dir === 'l')  cord.x = cord.x - 1;
-    else if (dir === 'r')  cord.x = cord.x + 1;
+    if      (dir === 'u')  cord.y = cord.y - STEP_SIZE;
+    else if (dir === 'd')  cord.y = cord.y + STEP_SIZE;
+    else if (dir === 'l')  cord.x = cord.x - STEP_SIZE;
+    else if (dir === 'r')  cord.x = cord.x + STEP_SIZE;
     return cord;
  }
 
