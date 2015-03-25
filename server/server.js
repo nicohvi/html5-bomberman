@@ -25,10 +25,10 @@ new Server({io: socketio, redis: redis});
 app.use(express.bodyParser());
 
 // game
-app.use(express.static(__dirname + "/../web/game/"));
+app.use(express.static(__dirname + "/../public/"));
 
 // monitor
-app.use("/monitor/", express.static(__dirname + "/../web/monitor/"));
+app.use("/monitor/", express.static(__dirname + "/../public/monitor/"));
 
 server.listen(8080);
 

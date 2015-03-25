@@ -108,6 +108,7 @@
             this.me.setUpdate(d);
             // update everyone else about my update
             this.socket.broadcast.volatile.emit('player-update', this.me.getUpdate());
+            this.view.emit('player-update', this.me.getUpdate());
         },
 
         onDead: function(d) {

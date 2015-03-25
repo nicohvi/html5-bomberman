@@ -98,6 +98,7 @@ define([
             console.log("full map update");
         },
 
+        // change to add player models
         onPlayerJoined: function(d) {
             d.name = _.escape(d.name);
             info("<u>" + d.name + "</u> joined");
@@ -164,7 +165,8 @@ define([
                 moving: d.m
             });
         },
-
+        
+        // look at me, I am the captain now.
         onPlayerDying: function(d) {
             var c = this.peers[d.id];
             if (!c) {

@@ -1,5 +1,3 @@
-
-
 TILE_EMPTY = 0;
 TILE_BRICK = 1;
 TILE_SOLID = 2;
@@ -42,13 +40,23 @@ var Server = Backbone.Model.extend({
         this.game.on('score-changes', _.debounce(this.notifyScoreUpdates, 50), this);
 
 
-        this.endpoint = io.of('/game1');
+        this.endpoint = io.of('/game');
         this.endpoint.on('connection', _.bind(this.connection, this));
+
+        this.view = io.of('/view');
+        this.view.on('connection', this.viewConnection.bind(this));
 
         this.game.endpoint = this.endpoint;
 
-        this.lobby = io.of('/lobby');
-        this.lobby.on('connection', _.bind(this.lobbyConnection, this));
+        //this.lobby = io.of('/lobby');
+        //this.lobby.on('connection', _.bind(this.lobbyConnection, this));
+    },
+
+    viewConnection: function (socket) {
+      // the view has connected to the WS server and is ready
+      // to receive updates.
+      console.log('view has connected to the server');
+
     },
 
     lobbyConnection: function(socket) {
@@ -91,6 +99,7 @@ var Server = Backbone.Model.extend({
                 character: d.character,
                 fbuid: d.fbuid
             });
+        
             this.game.playersById[playerId] = me;
 
             // setup a player controller
@@ -99,11 +108,14 @@ var Server = Backbone.Model.extend({
                 player: me,
                 game: this.game, // TODO joined game
                 socket: socket,
+                view: this.view,
                 endpoint: this.endpoint
             });
+
             this.game.ctrlsById[playerId] = ctrl;
 
             ctrl.on('disconnect', _.bind(function() {
+                console.log('player left yo');
                 delete this.game.playersById[playerId];
                 delete this.game.ctrlsById[playerId];
 
@@ -120,7 +132,8 @@ var Server = Backbone.Model.extend({
             console.log("+ " + name + " joined the game " + d.fbuid);
 
             // notify everyone about my join
-            socket.broadcast.emit('player-joined', me.getInitialInfo());
+            socket.broadcast.emit('player-joined', me.getInitialInfo());           
+            this.view.emit('player-joined', me.getInitialInfo());
 
             // update me about the current game state
             ctrl.notifyGameState();
@@ -149,6 +162,8 @@ var Server = Backbone.Model.extend({
             scoring[id] = p.get('score');
         });
 
+        // why not boat?
+        this.view.emit('score-updates', scoring);
         this.endpoint.emit('score-updates', scoring);
     }
 

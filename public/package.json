@@ -1,0 +1,19 @@
+{
+  "name": "socketman",
+  "version": "0.1.0",
+  "description": "Socket.io bomberman",
+  "main": "/scripts/app.js",
+  "scripts": {
+    "start": "watchify scripts/app.js -o bundle.js -v "
+  },
+  "dependencies": {
+    "socket.io-client": "^0.9.17",
+    "jquery": "2.1.3",
+    "lodash": "3.6.0" 
+  },
+  "devDependencies": {
+    "browserify": "9.0.3",
+    "watchify": "2.6.0"
+  }
+}
+

@@ -179,7 +179,6 @@ define([
         },
 
         update: function(dt) {
-
             this.players.each(function(p) { p.update(dt); });
             this.bombs.each(function(b) { b.update(dt); });
             this.flames.each(function(f) { f.update(dt); });
