@@ -53,13 +53,25 @@ module.exports = function(url) {
     console.log('you were disconnected');
   });
 
-  var move = function(dir) {
+  var moveCord = function(dir) {
     if      (dir === 'u')  cord.y = cord.y - 1;
     else if (dir === 'd')  cord.y = cord.y + 1;
     else if (dir === 'l')  cord.x = cord.x - 1;
     else if (dir === 'r')  cord.x = cord.x + 1;
+    return cord;
+ }
 
-    var update = _.extend(cord, { o: 3, m: false});
+ var faceDirection = function(dir) {
+    if      (dir === 'u')  return 1;
+    else if (dir === 'd')  return 0;
+    else if (dir === 'l')  return 3;
+    else if (dir === 'r')  return 2;
+ }
+ 
+  var move = function(dir) {
+    var cord = moveCord(dir);
+    var o = faceDirection(dir);
+    var update = _.extend(cord, { o: o, m: false});
     game.emit('update', update); 
   }
 
@@ -81,7 +93,7 @@ module.exports = function(url) {
 
   this.moveRight = function() {
     move('r');
-   }
+  }
   
   return this;
 }
