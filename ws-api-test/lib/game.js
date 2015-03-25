@@ -53,9 +53,35 @@ module.exports = function(url) {
     console.log('you were disconnected');
   });
 
+  var move = function(dir) {
+    if      (dir === 'u')  cord.y = cord.y - 1;
+    else if (dir === 'd')  cord.y = cord.y + 1;
+    else if (dir === 'l')  cord.x = cord.x - 1;
+    else if (dir === 'r')  cord.x = cord.x + 1;
+
+    var update = _.extend(cord, { o: 3, m: false});
+    game.emit('update', update); 
+  }
+
   this.join = function(name, character) { 
     game.emit('join', { name: name, character: character });
+  };
+
+  this.moveUp = function() {
+    move('u');
   }
+  
+  this.moveDown = function() {
+    move('d');
+  }
+
+  this.moveLeft = function() {
+    move('l');
+  }
+
+  this.moveRight = function() {
+    move('r');
+   }
   
   return this;
 }

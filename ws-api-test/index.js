@@ -3,8 +3,9 @@ var Characters = require('./lib/chars')();
 
 bomberman.join('Seal', Characters.Mary);
 
-//var update = _.extend(cord, { o: 3, m: false});
-//game.emit('update', update);
+setInterval(function() { bomberman.moveUp() }, 5000)
 
-
+setTimeout(function() {
+  setInterval(function() { bomberman.moveDown() }, 5000)
+}, 2500);
 
