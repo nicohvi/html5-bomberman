@@ -8,8 +8,8 @@ var Player = {
     this.name = opts.name || 'Frank';
     this.character = opts.character || 'Pikachu';
     this.id = -1;
-    this.socket = io.connect('/game');
-    this.setupListeners.call(this);
+    //this.socket = io.connect('/game');
+    //this.setupListeners.call(this);
   },
 
   setupListeners: function () {

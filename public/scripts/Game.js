@@ -4,7 +4,7 @@ var _ = require('lodash');
 
 var Game = {
 
-  init: function () {
+  init: function (username) {
     // setup state
     this.players = [];
     this.lastTime = Time.GetTicks();

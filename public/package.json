@@ -4,7 +4,7 @@
   "description": "Socket.io bomberman",
   "main": "/scripts/app.js",
   "scripts": {
-    "start": "watchify scripts/app.js -o bundle.js -v "
+    "start": "watchify scripts/app.js -o scripts/bundle.js -v "
   },
   "dependencies": {
     "socket.io-client": "^0.9.17",

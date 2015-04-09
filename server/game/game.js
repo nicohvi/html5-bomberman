@@ -1,4 +1,3 @@
-
 (function() {
 
     const DIRECTIONS = [
@@ -14,37 +13,56 @@
 
     Game = Backbone.Model.extend({
 
-        defaults: {
-            endPoint: 'game'
-        },
-
+        //defaults: {
+            //endPoint: 'game'
+        //},
         bombs: null,
-
         powerups: null,
 
         initialize: function(opt) {
+            this.players = [];
             this.redis = opt.redis;
-
             this.map = new Map();
 
-            this.playersById = {};
-            this.ctrlsById = {};
-            this.maxPlayerId = 0;
+            //this.playersById = {};
+            //this.ctrlsById = {};
+            //this.maxPlayerId = 0;
 
-            this.bombs = new BombCollection();
-            this.bombs.on('add', this.onBombAdded, this);
+            //this.bombs = new BombCollection();
+            //this.bombs.on('add', this.onBombAdded, this);
 
-            this.powerups = new PowerupCollection();
-            this.powerups.on('add', this.onPowerupAdded, this);
+            //this.powerups = new PowerupCollection();
+            //this.powerups.on('add', this.onPowerupAdded, this);
 
             // TODO move outside game
             this.lastTick = getTicks();
             setInterval(_.bind(this.update, this), 100);
+            //setInterval(
+              //_.bind(function () { this.map.update(this, getTicks() }, 500
+            //)
 
             // map updates
             setInterval(_.bind(function() {
                 this.map.update(this, getTicks());
             }, this), 20000);
+        },
+      
+        addPlayer: function (data) {
+          this.players.push(new Player(data));
+        },
+
+        removePlayer: function (data) {
+          this.players = _.filter(this.players, function (player) {
+            player.id != data.id;
+          });
+        },
+
+        playerMove: function (data) {
+          // find out which direction the player wants to move, update
+          // map accordingly and
+          _.findWhere(this.players, function (player) {
+            player.id == data.id;
+          }).update(data);
         },
 
         generatePlayerId: function() {
@@ -55,23 +73,23 @@
             var now = getTicks();
 
             // check bombs
-            this.bombs.each(function(b) {
-                if (b.get('timeTrigger')<=now) {
-                    this.explodeBomb(b);
-                }
-            }, this);
+            //this.bombs.each(function(b) {
+                //if (b.get('timeTrigger')<=now) {
+                    //this.explodeBomb(b);
+                //}
+            //}, this);
 
             // check player spawning
-            _.each(this.playersById, function(p) {
-                if (!p.get('alive') && p.get('spawnAt')<=now)
-                    this.spawnPlayer(p);
-            }, this);
+            //_.each(this.players, function(p) {
+                //if (!p.get('alive') && p.get('spawnAt')<=now)
+                    //this.spawnPlayer(p);
+            //}, this);
 
             this.lastTick = now;
         },
 
         spawnPlayer: function(p) {
-            this.ctrlsById[p.id].spawnPlayer();
+            p.spawn();
         },
 
         onBombAdded: function(b) {

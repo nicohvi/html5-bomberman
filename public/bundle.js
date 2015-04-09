@@ -24947,60 +24947,96 @@ var Game = {
 
 module.exports = Game;
 
-},{"./utils/time":7,"jquery":1,"lodash":2}],5:[function(require,module,exports){
+},{"./utils/time":8,"jquery":1,"lodash":2}],5:[function(require,module,exports){
 var io = require('socket.io-client');
 var Game = require('./Game');
 
 var GameManager = {
 
-  init: function () {
+  init: function (socket) {
     this.game = Game.init();
-    this.socket = io.connect('/view');
+    this.socket = socket;
     this.setupListeners.call(this);
   },
 
   setupListeners: function() {
-    this.socket.on('connect', this.connected.bind(this));
-    this.socket.on('disconnect', this.disconnected.bind(this));
-    this.socket.on('score-updates', this.scoreUpdate.bind(this));
-    this.socket.on('player-update', this.update.bind(this));
-    this.socket.on('player-joined', this.playerJoined.bind(this));
+    this.socket.on('game-info', this.onGameInfo.bind(this));
+    //this.socket.on('disconnect', this.disconnected.bind(this));
+    //this.socket.on('score-updates', this.scoreUpdate.bind(this));
+    //this.socket.on('player-update', this.update.bind(this));
+    //this.socket.on('player-joined', this.playerJoined.bind(this));
   },
 
-  connected: function () {
-    console.log('connected to server');
+  //connected: function () {
+    //console.log('connected to server');
+  //},
+
+  onGameInfo: function (data) {
+    debugger    
   },
 
-  disconnected: function () {
-  },
+  //disconnected: function () {
+  //},
 
-  scoreUpdate: function (data) {
-    // TODO
-  },
+  //scoreUpdate: function (data) {
+    //// TODO
+  //},
 
-  update: function (data) {
-    this.game.update(data);
-  },
+  //update: function (data) {
+    //this.game.update(data);
+  //},
 
-  playerJoined: function (player) {
-    console.log('player joined');
-    this.game.addPlayer(player);
-  }
+  //playerJoined: function (player) {
+    //console.log('player joined');
+    //this.game.addPlayer(player);
+  //}
 
 };
 
 module.exports = GameManager;
 
 },{"./Game":4,"socket.io-client":3}],6:[function(require,module,exports){
-// lobby is TODO
-// var lobby = require('./lobby');
-// lobby.init();
-
+var io  = require('socket.io-client');
+var $   = require('jquery');
 var GameManager = require('./GameManager');
 
-GameManager.init()
+var Lobby = {
 
-},{"./GameManager":5}],7:[function(require,module,exports){
+  init: function () {
+    this.el = $('#lobby');
+    this.socket = io.connect('/lobby');
+    this.setupListeners.call(this);
+  },
+
+  setupListeners: function() {
+    this.socket.on('connect', this.connect.bind(this));
+    this.socket.on('disconnect', this.disconnect.bind(this));
+    this.el.find('#start-game').on('click', this.startGame.bind(this));
+  },
+
+  connect: function () {
+    console.log('connected to lobby');
+  },
+
+  disconnect: function () {
+    console.log('disconnected from game');
+  },
+
+  startGame: function () {
+    this.socket.emit('join-game', { username: this.el.find('#username') }); 
+    GameManager.init(this.socket);
+  }
+
+};
+
+module.exports = Lobby;
+
+},{"./GameManager":5,"jquery":1,"socket.io-client":3}],7:[function(require,module,exports){
+ var Lobby = require('./Lobby');
+ Lobby.init();
+
+
+},{"./Lobby":6}],8:[function(require,module,exports){
 var Time = {
 
   GetTicks: function () {
@@ -25011,4 +25047,4 @@ var Time = {
 
 module.exports = Time;
 
-},{}]},{},[6]);
+},{}]},{},[7]);

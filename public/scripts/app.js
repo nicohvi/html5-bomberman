@@ -1,7 +1,5 @@
-// lobby is TODO
-// var lobby = require('./lobby');
-// lobby.init();
+var Lobby = require('./Lobby');
+var $     = require('jquery');
 
-var GameManager = require('./GameManager');
+$(document).ready(function () { Lobby.init(); });
 
-GameManager.init()
