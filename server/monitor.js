@@ -2,7 +2,7 @@
 
 var fs = require("fs");
 
-_ = require('underscore')._;
+var _ = require('underscore')._;
 
 Monitor = function(sio, r) {
 

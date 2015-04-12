@@ -1,50 +1,99 @@
-(function() {
+var LEFT = 37;
+var UP = 38;
+var RIGHT = 39;
+var DOWN = 40;
+var SPACE = 32;
+var PLAYER_MOVE_SPEED = 5; // squares per second
+var PLAYER_MAX_SPEED = 0.9;
+var ORIENT_DOWN = 0;
+var ORIENT_UP = 1;
+var ORIENT_RIGHT = 2;
+var ORIENT_LEFT = 3;
+
+(function() { 
 
     Player = Backbone.Model.extend({
 
         defaults: {
-            alive: true,
-            spawnAt: 0,
-            score: 0,
-            coolDown: { state: false, last: new Date() }
+          alive: false,
+          spawnAt: 0, // time until spawn
+          score: 0,
+          movement: {},
+          orient: ORIENT_DOWN
         },
 
         initialize: function(data) {
-            this.id = data.id;
-            this.username = data.username;
+            this.set('id', data.socketId);
         },
 
-        move: function (data) {
-          this.set('x', data.x);
+        spawn: function (loc) {
+          this.set('x', loc.x);
+          this.set('y', loc.y);
+          this.set('alive', true);
         },
 
-        //setUpdate: function(d) {
-            //this.set('x', d.x);
-            //this.set('y', d.y);
-            //this.set('o', d.o);
-            //this.set('m', d.m);
-            //this.updateCooldown();
-        //},
+        update: function (delta) {
+          var dx = 0,
+              dy = 0,
+              movement = this.get('movement');
 
-        //getUpdate: function() {
-            //return {
-                //id: this.get('id'),
-                //x: this.get('x'),
-                //y: this.get('y'),
-                //o: this.get('o'),
-                //m: this.get('m')
-            //};
-        //},
+          if (!this.get('alive')) return;
 
-        //getInitialInfo: function() {
-            //return {
-                //id: this.get('id'),
-                //name: this.get('name'),
-                //character: this.get('character'),
-                //score: this.get('score'),
-                //fbuid: this.get('fbuid')
-            //}
-        //},
+          var speed = delta * PLAYER_MOVE_SPEED;
+          if (speed > PLAYER_MAX_SPEED) speed = PLAYER_MAX_SPEED;
+
+          if (movement[LEFT])   dx-=speed;
+          if (movement[RIGHT])  dx+=speed;
+          if (movement[UP])     dy-=speed;
+          if (movement[DOWN])   dy+=speed;
+
+          var moving = movement[LEFT] || movement[RIGHT] || movement[UP] || movement[DOWN];
+
+          this.set('moving', moving===true);
+          return { dx: dx, dy: dy };
+        },
+
+        stop: function () {
+          var movement = this.get('movement')          
+          movement[LEFT] = false;
+          movement[RIGHT] = false;
+          movement[UP] = false;
+          movement[DOWN] = false;
+        },
+
+        input: function (data) {
+          var movement = this.get('movement');
+
+          switch(data.dir) {
+            case "left":
+              movement[LEFT] = true;
+              break;
+            case "right":
+              movement[RIGHT] = true;
+              break;
+            case "up":
+              movement[UP] = true;
+              break;
+            case "down":
+              movement[DOWN] = true;
+              break;
+          }
+          this.set('movement', movement);
+        },
+
+        deltaMove: function (dx, dy) {
+          this.set('x', this.get('x') + dx);
+          this.set('y', this.get('y') + dy);
+
+          if (dx < 0) 
+            this.set('orient', ORIENT_LEFT);
+          else if (dx > 0)
+            this.set('orient', ORIENT_RIGHT);
+          else if(dy < 0)
+            this.set('orient', ORIENT_UP);
+          else if(dy > 0)
+            this.set('orient', ORIENT_DOWN);
+        },
 
         die: function() {
             this.set('alive', false);
@@ -67,6 +116,7 @@
         }
 
     });
+})();
 
 
     //PlayerController = Backbone.Model.extend({
@@ -226,4 +276,4 @@
     //});
 
 
-})();
+//})();

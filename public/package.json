@@ -4,15 +4,18 @@
   "description": "Socket.io bomberman",
   "main": "/scripts/app.js",
   "scripts": {
-    "start": "watchify scripts/app.js -o scripts/bundle.js -v "
+    "view": "watchify scripts/view/app.js -t babelify -o scripts/view/bundle.js -v ",
+    "player": "watchify scripts/player/app.js -t babelify -o scripts/player/bundle.js -v"
   },
   "dependencies": {
     "socket.io-client": "^0.9.17",
     "jquery": "2.1.3",
-    "lodash": "3.6.0" 
+    "lodash": "3.6.0",
+    "object-assign": "2.0.0"
   },
   "devDependencies": {
     "browserify": "9.0.3",
+    "babelify": "6.0.2",
     "watchify": "2.6.0"
   }
 }

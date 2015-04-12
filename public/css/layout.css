@@ -1,0 +1,40 @@
+.game-canvas {
+  position: absolute;
+  left: 0;
+}
+
+canvas {
+}
+
+.img {
+  background: url('../sprites/tiles.png');
+}
+
+.canvas-0 {
+  /*background: url('../sprites/grassTile.png');*/
+}
+
+/*ul, li { list-style: none; padding: 0; margin: 0;}*/
+
+/*.tiles { display: flex; }*/
+
+/*.tile { */
+  /*display: inline-flex;*/
+  /*min-width: 16px;*/
+  /*min-height: 16px;*/
+  /*width: 16px;*/
+  /*height: 16px;*/
+  /*background-image: url('../sprites/tiles.png');*/
+/*}*/
+
+/*.tile-solid {*/
+  /*background-position: 80px 0;*/
+/*}*/
+
+/*.tile-empty {*/
+  /*background-position: 0 0;*/
+/*}*/
+
+/*.tile-brick {*/
+  /*background-position: 96px 0;*/
+/*}*/

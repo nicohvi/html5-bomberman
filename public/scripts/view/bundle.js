@@ -24887,164 +24887,383 @@ if (typeof define === "function" && define.amd) {
 }
 })();
 },{}],4:[function(require,module,exports){
+'use strict';
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
 var $ = require('jquery');
-var Time = require('./utils/time');
 var _ = require('lodash');
 
-var Game = {
+var SQUARE_SIZE = 16,
+    VIEW_WIDTH = 50,
+    VIEW_HEIGHT = 40,
+    CHAR_WIDTH = 22,
+    CHAR_HEIGHT = 22,
+    CHAR_X = 11,
+    CHAR_Y = 17,
+    MOVE_ANIM_SPEED = 0.1;
 
-  init: function () {
-    // setup state
-    this.players = [];
-    this.lastTime = Time.GetTicks();
-    this.view = $('#view');
+var Canvas = (function () {
+  function Canvas(map) {
+    _classCallCheck(this, Canvas);
 
-    // layout
-    _.defer(this.layout.bind(this)); 
-      
-    this.setupListeners.call(this);
+    this.dirtyZones = [];
+    this.canvases = [];
+    this.charSprites = {};
+    this.repaint = true;
+    this.map = map;
+    this.initialized = false;
 
-    // initial update
-    _.defer(this.update.bind(this));
-  },
+    // map TODO: why 2?
+    this.canvases[0] = this._canvas(VIEW_WIDTH * SQUARE_SIZE, VIEW_HEIGHT * SQUARE_SIZE, 0);
 
-  setupListeners: function () {
-    $(window).resize(this.layout.bind(this));
-  },
+    // sprites
+    this.canvases[1] = this._canvas(VIEW_WIDTH * SQUARE_SIZE, VIEW_HEIGHT * SQUARE_SIZE, 1);
 
-  addPlayer: function (player) {
-    this.players.push(player);
-  },
-
-  layout: function () {
-    var $doc = $(document);
-
-    this.view.css({
-      left: 220 + ($doc.width() - 220 - this.view.width())/2 + 'px',
-      top: '20px'
-    });  
-  },
-
-  // TODO: move to game manager
-  update: function () {
-    var now   = Time.GetTicks(),
-        delta = (now - this.lastTime) / 1000;
-    
-    this.updatePlayers(delta).bind(this)
-
-    this.lastTime = now;
-    window.requestAnimationFrame(this.update.bind(this));   
-  },
-
-  updatePlayers: function (delta) {
-    this.players.map( function (player) {
-      // TODO
-      console.log('update player ' +player.name+ ' at delta: ' +delta);
+    // TODO: Move
+    _.each(this.canvases, function ($el) {
+      $('body').append($el);
     });
+
+    _.each(['john', 'joe', 'betty', 'mary'], (function (name) {
+      this.charSprites[name] = this._loadSprite('../../sprites/char-' + name + '.png');
+    }).bind(this));
+
+    this.flameSprite = this._loadSprite('../../sprites/flames.png');
+    this.bombSprite = this._loadSprite('../../sprites/bombs.png');
+    this.tileSprite = this._loadSprite('../../sprites/tiles.png');
   }
 
+  _createClass(Canvas, [{
+    key: 'draw',
+    value: function draw() {
+      this.drawMap();
+      this.drawPlayers();
+      //this._drawFlames();
+      //this._drawBombs();
+      //this._drawPlayers();
+      //this._drawBreakings();
+    }
+  }, {
+    key: 'addDirtyZone',
+    value: function addDirtyZone(x, y, width, height) {
+      //if(this.repaint) return;
+
+      if (typeof x == 'undefined') this.repaint = true;else if (typeof width == 'undefined') {
+        width = 1;
+        height = 1;
+      }
+
+      this.dirtyZones.push({
+        x: Math.floor(x), y: Math.floor(y),
+        width: Math.ceil(width), height: Math.ceil(height)
+      });
+    }
+  }, {
+    key: '_canvas',
+    value: function _canvas(width, height, i) {
+      var $canvas = $('<canvas width="' + width + '" height="' + height + '" data-index="' + i + '" class=" game-canvas ' + 'canvas-' + i + '"/>');
+      return $canvas;
+    }
+  }, {
+    key: '_loadSprite',
+    value: function _loadSprite(path) {
+      // TODO: Image
+      return $('<img src="' + path + '" />').get(0);
+    }
+  }, {
+    key: 'drawMap',
+    value: function drawMap() {
+      var mapCanvas = this.canvases[0].get(0),
+          ctx = mapCanvas.getContext('2d'),
+          tileSprite = this.tileSprite,
+          drawnTiles = 0;
+      //x           = Math.floor(this.viewport.x),
+      //y           = Math.floor(this.viewport.y),
+
+      if (this.repaint) this.addDirtyZone(0, 0, this.map.width, this.map.height);
+
+      // Draw dirty zones
+      for (var i = 0; i < this.dirtyZones.length; i++) {
+        var zone = this.dirtyZones[i];
+        for (var j = 0; j < zone.width; j++) {
+          for (var k = 0; k < zone.height; k++) {
+            var cx = j + zone.x,
+                cy = k + zone.y,
+                tile = this.map.getTile(cx, cy);
+
+            ctx.drawImage(tileSprite, tile * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, cx * SQUARE_SIZE, cy * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
+            drawnTiles++;
+          } // k
+        } // j
+      } // i
+
+      this.dirtyZones = [];
+      this.repaint = false;
+    }
+  }, {
+    key: 'drawPlayers',
+    value: function drawPlayers(players) {
+      _.each(players, (function (player) {
+        this._drawPlayer(player);
+      }).bind(this));
+    }
+  }, {
+    key: '_drawPlayer',
+    value: function _drawPlayer(player) {
+      var frame = Math.floor(player.frame / MOVE_ANIM_SPEED),
+          charCanvas = this.canvases[1],
+          ctx = charCanvas.get(0).getContext('2d'),
+          frameX,
+          frameY,
+          x,
+          y,
+          sprite;
+
+      // Tile coordinates
+      if (player.alive) {
+        frameX = frame % 3;
+        if (!player.moving) frameX = 1;
+        frameY = player.orient;
+      } else {
+        frameY = Math.floor(frame / 3) + 4;
+        frameX = frame % 3;
+      }
+
+      x = Math.round(player.x * SQUARE_SIZE) - CHAR_X;
+      y = Math.round(player.y * SQUARE_SIZE) - CHAR_Y;
+
+      sprite = this.charSprites[player.character];
+      ctx.clearRect(0, 0, charCanvas.width(), charCanvas.height());
+      // TODO
+      if (frameY < 8) {
+        ctx.drawImage(sprite, frameX * CHAR_WIDTH, frameY * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT, x, y, CHAR_WIDTH, CHAR_HEIGHT);
+      }
+    }
+  }]);
+
+  return Canvas;
+})();
+
+module.exports = Canvas;
+
+},{"jquery":1,"lodash":2}],5:[function(require,module,exports){
+'use strict';
+
+var _ = require('lodash');
+
+var Map = require('./Map');
+var Player = require('./Player');
+
+function getTicks() {
+  return new Date().getTime();
+}
+
+var Game = {
+  init: function init(data) {
+    this.lastTick = getTicks();
+    this.players = [];
+    this.map = new Map(data.map);
+    this.canvas = this.map.canvas;
+    setTimeout((function () {
+      this.map.draw();
+    }).bind(this), 500);
+    // TODO: onLoadedSprite
+    this.update();
+  },
+
+  playerJoin: function playerJoin(player) {
+    var plr = new Player(player);
+    this.players.push(plr);
+  },
+
+  playerLeave: function playerLeave(id) {
+    if (_.isEmpty(this.players)) {
+      return;
+    }this.players = _.filter(this.players, function (player) {
+      return player.id != id;
+    });
+  },
+
+  playerSpawn: function playerSpawn(player) {
+    var plr = _.find(this.players, function (item) {
+      return item.id == player.id;
+    });
+    plr.update(player);
+  },
+
+  playerUpdate: function playerUpdate(player) {
+    var plr = _.find(this.players, function (item) {
+      return item.id == player.id;
+    });
+    if (!plr) {
+      console.log('Unkown update: ' + player.id);
+      return;
+    }
+
+    plr.update(player);
+  },
+
+  update: function update() {
+    var now = getTicks(),
+        delta = (now - this.lastTick) / 1000;
+
+    _.each(this.players, function (player) {
+      player.animationUpdate(delta);
+    });
+
+    this.canvas.drawPlayers(this.players);
+    this.lastTick = now;
+    window.requestAnimationFrame(this.update.bind(this));
+  }
 };
 
 module.exports = Game;
 
-},{"./utils/time":8,"jquery":1,"lodash":2}],5:[function(require,module,exports){
+},{"./Map":7,"./Player":8,"lodash":2}],6:[function(require,module,exports){
+'use strict';
+
 var io = require('socket.io-client');
 var Game = require('./Game');
 
 var GameManager = {
 
-  init: function (socket) {
-    this.game = Game.init();
-    this.socket = socket;
+  init: function init() {
+    this.socket = io.connect('/view');
     this.setupListeners.call(this);
+    //setInterval(function () { this.socket.emit('ping') }.bind(this), 1000);
   },
 
-  setupListeners: function() {
+  setupListeners: function setupListeners() {
     this.socket.on('game-info', this.onGameInfo.bind(this));
-    //this.socket.on('disconnect', this.disconnected.bind(this));
-    //this.socket.on('score-updates', this.scoreUpdate.bind(this));
-    //this.socket.on('player-update', this.update.bind(this));
-    //this.socket.on('player-joined', this.playerJoined.bind(this));
+    this.socket.on('player-join', this.onPlayerJoin.bind(this));
+    this.socket.on('player-leave', this.onPlayerLeave.bind(this));
+    this.socket.on('player-spawn', this.onPlayerSpawn.bind(this));
+    this.socket.on('player-update', this.onPlayerUpdate.bind(this));
+    this.socket.on('pong', this.onPong.bind(this));
   },
 
-  //connected: function () {
-    //console.log('connected to server');
-  //},
-
-  onGameInfo: function (data) {
-    debugger    
+  onGameInfo: function onGameInfo(data) {
+    Game.init(data.game);
   },
 
-  //disconnected: function () {
-  //},
+  onPlayerJoin: function onPlayerJoin(data) {
+    Game.playerJoin(data.player);
+  },
 
-  //scoreUpdate: function (data) {
-    //// TODO
-  //},
+  onPlayerLeave: function onPlayerLeave(data) {
+    Game.playerLeave(data.id);
+  },
 
-  //update: function (data) {
-    //this.game.update(data);
-  //},
+  onPlayerSpawn: function onPlayerSpawn(data) {
+    Game.playerSpawn(data.player);
+  },
 
-  //playerJoined: function (player) {
-    //console.log('player joined');
-    //this.game.addPlayer(player);
-  //}
+  onPlayerUpdate: function onPlayerUpdate(data) {
+    Game.playerUpdate(data.player);
+  },
 
-};
+  onPong: function onPong() {
+    console.log('pong');
+  } };
 
 module.exports = GameManager;
 
-},{"./Game":4,"socket.io-client":3}],6:[function(require,module,exports){
-var io  = require('socket.io-client');
-var $   = require('jquery');
+},{"./Game":5,"socket.io-client":3}],7:[function(require,module,exports){
+'use strict';
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var Canvas = require('./Canvas');
+
+var Map = (function () {
+  function Map(data) {
+    _classCallCheck(this, Map);
+
+    this.x = data.x, this.y = data.y, this.width = data.width;
+    this.height = data.height;
+    this.map = data.map;
+    this.canvas = new Canvas(this);
+  }
+
+  _createClass(Map, [{
+    key: 'draw',
+    value: function draw() {
+      if (this.canvas) this.canvas.draw();
+    }
+  }, {
+    key: 'setDirty',
+    value: function setDirty(x, y, width, height) {
+      if (this.canvas) this.canvas.addDirtyZone(x, y, width, height);
+    }
+  }, {
+    key: 'getTile',
+    value: function getTile(x, y) {
+      var index = y * this.width + x;
+      return this.map[index];
+    }
+  }]);
+
+  return Map;
+})();
+
+module.exports = Map;
+
+},{"./Canvas":4}],8:[function(require,module,exports){
+'use strict';
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var Player = (function () {
+  function Player(options) {
+    _classCallCheck(this, Player);
+
+    this.x = options.x;
+    this.y = options.y;
+    this.orient = options.orient;
+    this.id = options.id;
+    this.name = options.name;
+    this.score = options.score;
+    this.movement = options.movement;
+    this.alive = options.alive;
+    this.moving = options.moving;
+    this.frame = 0;
+    this.character = 'betty';
+  }
+
+  _createClass(Player, [{
+    key: 'update',
+    value: function update(options) {
+      this.x = options.x, this.y = options.y, this.orient = options.orient;
+      this.moving = options.moving;
+      this.alive = options.alive;
+    }
+  }, {
+    key: 'animationUpdate',
+    value: function animationUpdate(delta) {
+      this.frame += delta;
+    }
+  }]);
+
+  return Player;
+})();
+
+module.exports = Player;
+
+},{}],9:[function(require,module,exports){
+'use strict';
+
+var $ = require('jquery');
 var GameManager = require('./GameManager');
 
-var Lobby = {
+$(document).ready(function () {
+  GameManager.init();
+});
 
-  init: function () {
-    this.el = $('#lobby');
-    this.socket = io.connect('/lobby');
-    this.setupListeners.call(this);
-  },
-
-  setupListeners: function() {
-    this.socket.on('connect', this.connect.bind(this));
-    this.socket.on('disconnect', this.disconnect.bind(this));
-    this.el.find('#start-game').on('click', this.startGame.bind(this));
-  },
-
-  connect: function () {
-    console.log('connected to lobby');
-  },
-
-  disconnect: function () {
-    console.log('disconnected from game');
-  },
-
-  startGame: function () {
-    this.socket.emit('join-game', { username: this.el.find('#username') }); 
-    GameManager.init(this.socket);
-  }
-
-};
-
-module.exports = Lobby;
-
-},{"./GameManager":5,"jquery":1,"socket.io-client":3}],7:[function(require,module,exports){
- var Lobby = require('./Lobby');
- Lobby.init();
-
-
-},{"./Lobby":6}],8:[function(require,module,exports){
-var Time = {
-
-  GetTicks: function () {
-    new Date().getTime();
-  }
-
-};
-
-module.exports = Time;
-
-},{}]},{},[7]);
+},{"./GameManager":6,"jquery":1}]},{},[9]);

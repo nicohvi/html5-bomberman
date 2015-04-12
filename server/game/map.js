@@ -1,4 +1,6 @@
-
+var TILE_EMPTY = 0,
+    TILE_SOLID = 2,
+    TILE_BRICK = 1;
 (function() {
 
     MapGenerator = Backbone.Model.extend({
@@ -12,6 +14,8 @@
 
             this.classicMapGenerator();
             this.borderedMapGenerator();
+
+            this.tileMap = this.generateTileMap();
         },
 
         borderedMapGenerator: function() {
@@ -28,12 +32,10 @@
 
             for(var i=0; i<this.w; i++) {
                 for(var j=0; j<this.h; j++) {
-
-                    if (i%2==0 && j%2==0)
+                  if (i%2==0 && j%2==0)
                         this.setMap(i,j, TILE_SOLID);
                     else if ( Math.floor(Math.random()*9)==0)
                         this.setMap(i,j, TILE_BRICK);
-
                 }
             }
         },
@@ -48,6 +50,26 @@
                 height: this.h,
                 map: this.map.join("")
             };
+        },
+
+        getTileMap: function () {
+          return { rows: this.w, columns: this.h, tileMap: this.tileMap };
+        },
+
+        generateTileMap: function () {
+          var mapString = this.map.join("");
+          var tileMap = new Array(this.h);
+          var rowIndex = 0;
+          for(var y=0; y < this.h; y++) {
+            tileMap[y] = new Array(this.w);
+            var columnIndex = 0;
+            for(var x=rowIndex; x < this.w+rowIndex; x++) {
+              tileMap[y][columnIndex] = mapString.charAt(x);
+              columnIndex++;
+            }
+            rowIndex = rowIndex + this.w; 
+          }
+          return tileMap;
         }
     });
 
@@ -61,15 +83,24 @@
         },
 
         initialize: function() {
-            var map = new MapGenerator({
+            var mapGenerator = new MapGenerator({
                 w: this.get('width'),
                 h: this.get('height')
-            }).getMap();
+            });
+            var map = mapGenerator.getMap();
+            //this.tileMap = mapGenerator.getTileMap();
             this.set(map);
         },
 
         getAbsTile: function(x, y) {
             return this.getTile(x - this.get('x'), y - this.get('y'));
+        },
+
+        canMove: function (floorX, floorY, girthX, girthY) {
+          if(this.getTile(girthX, girthY) != TILE_EMPTY)
+            return false;
+
+          return true; 
         },
 
         getTile: function(x, y) {
@@ -87,10 +118,14 @@
             return {
                 x: this.get('x'),
                 y: this.get('y'),
-                w: this.get('width'),
-                h: this.get('height'),
+                width: this.get('width'),
+                height: this.get('height'),
                 map: this.get('map')
             }
+        },
+
+        getTileMap: function () {
+          return this.tileMap;
         },
 
         setAbsMap: function(x, y, c, silent) {
