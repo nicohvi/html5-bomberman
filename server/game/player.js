@@ -3,12 +3,13 @@ var UP = 38;
 var RIGHT = 39;
 var DOWN = 40;
 var SPACE = 32;
-var PLAYER_MOVE_SPEED = 0.1;
+var PLAYER_MOVE_SPEED = 0.125;
 var ORIENT_DOWN = 0;
 var ORIENT_UP = 1;
 var ORIENT_RIGHT = 2;
 var ORIENT_LEFT = 3;
 var util = require('util');
+var moveAmount = 0.125;
 
 (function() { 
 
@@ -53,16 +54,38 @@ var util = require('util');
         },
 
         stop: function () {
-          console.log('stopping player ' +this.get('id'))
-          var movement = this.get('movement')          
-          movement[LEFT] = false;
-          movement[RIGHT] = false;
-          movement[UP] = false;
-          movement[DOWN] = false;
-          this.set('movement', movement)
+          //console.log('stopping player ' +this.get('id'))
+          //var movement = this.get('movement')          
+          //movement[LEFT] = false;
+          //movement[RIGHT] = false;
+          //movement[UP] = false;
+          //movement[DOWN] = false;
+          //this.set('movement', movement)
           this.set('moving', false)
         },
 
+        getMove: function (direction) {
+          var dx = 0,
+              dy = 0;
+
+          switch(direction) {
+            case 'left':
+              dx -= moveAmount;
+              break;
+            case 'right':
+              dx += moveAmount;
+              break;
+            case 'up':
+              dy -= moveAmount;
+              break;
+            case 'down':
+              dy += moveAmount;
+              break;
+          }
+      
+          return { dx: dx, dy: dy };
+        },    
+  
         input: function (data) {
           var movement = this.get('movement');
 
@@ -98,6 +121,7 @@ var util = require('util');
             this.set('orient', ORIENT_UP);
           else if(dy > 0)
             this.set('orient', ORIENT_DOWN);
+          this.set('moving', true);
         },
 
         die: function() {

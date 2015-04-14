@@ -78,7 +78,8 @@ var Server = Backbone.Model.extend({
 
       socket.on('request-move', function (data) {
         var player = this.game.playerMove(socketId, data);
-        this.playerUpdate(player);
+        if(typeof(player) != 'null')
+          this.playerUpdate(player);
       }.bind(this));
 
       socket.on('stop-move', function () {

@@ -70,8 +70,6 @@ var PLAYER_GIRTH = 0.35;
         },
 
         playerMove: function (socketId, data) {
-          console.log('player move called')
-          console.log("socketId: "+socketId)
           var player = this.players[socketId];
 
           if(typeof(player) == 'undefined') {
@@ -79,10 +77,14 @@ var PLAYER_GIRTH = 0.35;
             return;
           }
           
-          player.input(data);
-          var delta = player.update();
-          this.requestMove(player, delta);
-          return player;
+          //player.input(data);
+          //var delta = player.update();
+          //this.requestMove(player, delta);
+          var delta = player.getMove(data.dir);
+          if(this.requestMove(player, delta))
+            return player;
+          else
+            return null;
         },
 
         _generatePlayerId: function () {
@@ -103,19 +105,30 @@ var PLAYER_GIRTH = 0.35;
               dy = delta.dy,
               floorX = Math.floor(x),
               floorY = Math.floor(y),
-              girthX = Math.floor(x + dx + this._direction(dx)*PLAYER_GIRTH),
-              girthY = Math.floor(y + dy + this._direction(dy)*PLAYER_GIRTH);
+              newX = Math.floor(x + dx + this._direction(dx)*PLAYER_GIRTH),
+              newY = Math.floor(y + dy + this._direction(dy)*PLAYER_GIRTH);
+          // x-axis
           
-          
-          if(!this.map.canMove(floorX, floorY, girthX, girthY))
+          if(!this.map.canMove(newX, floorY))
             dx = 0;
-          else 
-            girthX = Math.floor(x + dx);
 
-          if(!this.map.canMove(floorX, floorY, floorX, girthY))
+          // y-axis
+          if(!this.map.canMove(floorX, newY))
             dy = 0;
+            
+          //if(!this.map.canMove(floorX, floorY, girthX, girthY))
+            //dx = 0;
+          //else 
+            //girthX = Math.floor(x + dx);
 
-          player.deltaMove(dx, dy);
+          //if(!this.map.canMove(floorX, floorY, floorX, girthY))
+            //dy = 0;
+          if(dx != 0 || dy != 0) {
+            player.deltaMove(dx, dy);
+            return true;
+          } else {
+            return false;
+          }
         }
 
         //update: function() {

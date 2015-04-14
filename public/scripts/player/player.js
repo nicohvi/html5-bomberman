@@ -5,6 +5,10 @@ var _   = require('lodash');
 var _names = ['Frank', 'Timmy', 'Peter', 'Bent', 'Ben'];
 var _moves = ['up', 'down', 'left', 'right'];
 
+function getTick() {
+  return new Date().getTime();
+}
+
 var Player = {
 
   init: function (opts) {
@@ -15,12 +19,11 @@ var Player = {
 
   moveRandomly: function () {
     setInterval(function () {
-      var move = _.sample(_moves);
-      _.times(10, function () {
-        this.doMove(move)
-      }.bind(this));
-      this.socket.emit('stop-move');
-    }.bind(this), 500)
+       var move = _.throttle(this.doMove.bind(this, _.sample(_moves)), 100)
+      _.times(50, function () {
+        move.call(this);
+      }.bind(this))
+    }.bind(this), 1000);
   },
 
   setupListeners: function () {
@@ -30,7 +33,7 @@ var Player = {
 
   onConnect: function () {
     this.socket.emit('join-game', { name: this.name });
-    this.moveRandomly();
+    //this.moveRandomly();
   },
 
   onKeyDown: function (event) {

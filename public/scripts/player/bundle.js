@@ -24902,6 +24902,10 @@ var _ = require('lodash');
 var _names = ['Frank', 'Timmy', 'Peter', 'Bent', 'Ben'];
 var _moves = ['up', 'down', 'left', 'right'];
 
+function getTick() {
+  return new Date().getTime();
+}
+
 var Player = {
 
   init: function init(opts) {
@@ -24912,12 +24916,11 @@ var Player = {
 
   moveRandomly: function moveRandomly() {
     setInterval((function () {
-      var move = _.sample(_moves);
-      _.times(10, (function () {
-        this.doMove(move);
+      var move = _.throttle(this.doMove.bind(this, _.sample(_moves)), 100);
+      _.times(50, (function () {
+        move.call(this);
       }).bind(this));
-      this.socket.emit('stop-move');
-    }).bind(this), 500);
+    }).bind(this), 1000);
   },
 
   setupListeners: function setupListeners() {
@@ -24927,7 +24930,7 @@ var Player = {
 
   onConnect: function onConnect() {
     this.socket.emit('join-game', { name: this.name });
-    this.moveRandomly();
+    //this.moveRandomly();
   },
 
   onKeyDown: function onKeyDown(event) {
