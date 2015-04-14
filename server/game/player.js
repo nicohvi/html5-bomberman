@@ -3,12 +3,12 @@ var UP = 38;
 var RIGHT = 39;
 var DOWN = 40;
 var SPACE = 32;
-var PLAYER_MOVE_SPEED = 5; // squares per second
-var PLAYER_MAX_SPEED = 0.9;
+var PLAYER_MOVE_SPEED = 0.1;
 var ORIENT_DOWN = 0;
 var ORIENT_UP = 1;
 var ORIENT_RIGHT = 2;
 var ORIENT_LEFT = 3;
+var util = require('util');
 
 (function() { 
 
@@ -32,21 +32,20 @@ var ORIENT_LEFT = 3;
           this.set('alive', true);
         },
 
-        update: function (delta) {
+        update: function () {
           var dx = 0,
               dy = 0,
               movement = this.get('movement');
 
           if (!this.get('alive')) return;
-
-          var speed = delta * PLAYER_MOVE_SPEED;
-          if (speed > PLAYER_MAX_SPEED) speed = PLAYER_MAX_SPEED;
+          
+          var speed = PLAYER_MOVE_SPEED;
 
           if (movement[LEFT])   dx-=speed;
           if (movement[RIGHT])  dx+=speed;
           if (movement[UP])     dy-=speed;
           if (movement[DOWN])   dy+=speed;
-
+          
           var moving = movement[LEFT] || movement[RIGHT] || movement[UP] || movement[DOWN];
 
           this.set('moving', moving===true);
@@ -54,11 +53,14 @@ var ORIENT_LEFT = 3;
         },
 
         stop: function () {
+          console.log('stopping player ' +this.get('id'))
           var movement = this.get('movement')          
           movement[LEFT] = false;
           movement[RIGHT] = false;
           movement[UP] = false;
           movement[DOWN] = false;
+          this.set('movement', movement)
+          this.set('moving', false)
         },
 
         input: function (data) {
@@ -78,6 +80,9 @@ var ORIENT_LEFT = 3;
               movement[DOWN] = true;
               break;
           }
+        
+          console.log('input for player '+this.get('id'))
+          
           this.set('movement', movement);
         },
 

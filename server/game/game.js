@@ -1,6 +1,6 @@
 var assign = require('object-assign');
 var lo = require('lodash');
-var insp = require('util');
+var util = require('util');
 
 var PLAYER_GIRTH = 0.35;
 
@@ -19,15 +19,11 @@ var PLAYER_GIRTH = 0.35;
 
     Game = Backbone.Model.extend({
 
-        //defaults: {
-            //endPoint: 'game'
-        //},
         bombs: null,
         powerups: null,
 
         initialize: function(opt) {
-            this.players = [];
-            this.playerId = 1;
+            this.players = {};
             this.redis = opt.redis;
             this.map = new Map();
 
@@ -36,9 +32,6 @@ var PLAYER_GIRTH = 0.35;
 
             //this.powerups = new PowerupCollection();
             //this.powerups.on('add', this.onPowerupAdded, this);
-
-            this.lastTick = getTicks();
-            setInterval(_.bind(this.update, this), 50);
         },
       
         getState: function () {
@@ -48,7 +41,7 @@ var PLAYER_GIRTH = 0.35;
         addPlayer: function (data) {
           console.log('adding player with socket id: ' +data.socketId);
           var player = new Player(data);
-          this.players.push(player);
+          this.players[data.socketId] = player;
           return player;
         },
 
@@ -61,26 +54,34 @@ var PLAYER_GIRTH = 0.35;
         },
 
         removePlayer: function (socketId) {
-          this.players = _.filter(this.players, function (player) {
-            player.get('socketId') != socketId;
-          });
+          delete this.players[socketId];
+        },
+      
+        playerStop: function (socketId) {
+          var player = this.players[socketId];
+
+          if(typeof(player) == 'undefined') {
+              console.log('player not found')
+              return;
+            }
+
+          player.stop();
+          return player;
         },
 
         playerMove: function (socketId, data) {
-          var player = lo.find(this.players, function (player) {
-            return player.get('id') == socketId;
-          });
+          console.log('player move called')
+          console.log("socketId: "+socketId)
+          var player = this.players[socketId];
 
           if(typeof(player) == 'undefined') {
             console.log('player not found')
             return;
           }
-            
-          if(typeof(data) == 'undefined')
-            player.stop();
-          else
-            player.input(data);
           
+          player.input(data);
+          var delta = player.update();
+          this.requestMove(player, delta);
           return player;
         },
 
@@ -114,21 +115,23 @@ var PLAYER_GIRTH = 0.35;
           if(!this.map.canMove(floorX, floorY, floorX, girthY))
             dy = 0;
 
-          console.log("dx :" +dx+ " dy: " +dy)
-
           player.deltaMove(dx, dy);
-        },
+        }
 
-        update: function() {
-          var now = getTicks();
-          var delta = (now - this.lastTick) / 1000;
+        //update: function() {
+          //var now = getTicks();
+          //var delta = (now - this.lastTick) / 1000;
 
-          _.each(this.players, function (player) {
-            var update = player.update(delta);
-            if(player.get('moving'))
-              this.requestMove(player, update); 
-            this.trigger('player-update', player);
-          }.bind(this));     
+            //console.log('updating ' +_.size(this.players)+ ' players');
+          //_.each(this.players, function (player) {
+            //console.log('player ' +player.get('id')+ ' moving: ' +player.get('moving'))
+            //var update = player.update(delta);
+            //console.log('player ' +player.get('id')+ ' moving: ' +player.get('moving'))
+            //if(player.get('moving')) {
+              //this.requestMove(player, update); 
+            //}
+            //this.trigger('player-update', player);
+          //}.bind(this));     
 
             // check bombs
             //this.bombs.each(function(b) {
@@ -143,10 +146,10 @@ var PLAYER_GIRTH = 0.35;
                     //this.spawnPlayer(p);
             //}, this);
 
-            this.lastTick = now;
+            //this.lastTick = now;
             
             //this.trigger('update', this.getState());
-        }
+        //}
     });
 
 

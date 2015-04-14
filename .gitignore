@@ -2,3 +2,4 @@
 /.idea/
 dump.rdb
 *.log
+*.DS_Store

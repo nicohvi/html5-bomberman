@@ -33,7 +33,6 @@ var Server = Backbone.Model.extend({
         io.set('log level', 1);
         
         this.game = new Game({ redis: redis });
-        //this.game.on('update', this.onGameUpdate.bind(this));
         this.game.on('player-spawn', this.playerSpawned.bind(this));
         this.game.on('player-update', this.playerUpdate.bind(this));
 
@@ -44,12 +43,6 @@ var Server = Backbone.Model.extend({
         this.playerSocket.on('connection', this.onPlayerConnection.bind(this));
   
     },
-
-    //onGameUpdate: function (state) {
-      //_.forEach(this.views, function (view) {
-        //view.emit('game-info', { game: state });
-      //}.bind(this));
-    //},
 
     // View connects the socket, receives inital game information
     // and is subscribed for future updates.
@@ -89,7 +82,7 @@ var Server = Backbone.Model.extend({
       }.bind(this));
 
       socket.on('stop-move', function () {
-        var player = this.game.playerMove(socketId);
+        var player = this.game.playerStop(socketId);
         this.playerUpdate(player);
       }.bind(this))
 

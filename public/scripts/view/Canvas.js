@@ -118,15 +118,17 @@ class Canvas {
   }
 
   drawPlayers (players) {
+    var charCanvas = this.canvases[1],
+        ctx = charCanvas.get(0).getContext('2d');
+
+    ctx.clearRect(0,0, charCanvas.width(), charCanvas.height());
     _.each(players, function (player) {
-      this._drawPlayer(player);
+      this._drawPlayer(player, ctx);
     }.bind(this)); 
   }
 
-  _drawPlayer (player) {
+  _drawPlayer (player, ctx) {
     var frame = Math.floor(player.frame / MOVE_ANIM_SPEED),
-        charCanvas = this.canvases[1],
-        ctx = charCanvas.get(0).getContext('2d'),
         frameX, frameY, x, y, sprite;
     
     // Tile coordinates
@@ -143,7 +145,7 @@ class Canvas {
     y = Math.round(player.y * SQUARE_SIZE) - CHAR_Y;
     
     sprite = this.charSprites[player.character];
-    ctx.clearRect(0,0, charCanvas.width(), charCanvas.height());
+    
     // TODO
     if(frameY < 8) {
       ctx.drawImage(sprite, 

@@ -10,7 +10,7 @@ function getTicks() {
 var Game = {
   init: function (data) {
     this.lastTick = getTicks();
-    this.players = [];
+    this.players = this._getPlayers(data.players);
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout(function () { this.map.draw() }.bind(this), 500);
@@ -19,29 +19,26 @@ var Game = {
   },
 
   playerJoin: function (player) {
+    console.log('player join')
     var plr = new Player(player);
-    this.players.push(plr);
+    this.players[player.id] = plr;
   },
 
   playerLeave: function (id) {
-    if(_.isEmpty(this.players))
-      return;
-    this.players = _.filter(this.players, function (player) {
-          return player.id != id;
-        });
+    console.log('player leave')
+    if(_.isEmpty(this.players)) return;
+    delete this.players[id];
   },
 
   playerSpawn: function (player) {
-    var plr = _.find(this.players, function (item) {
-      return item.id == player.id;
-    });
+    console.log('player spawn')
+    var plr = this.players[player.id];
     plr.update(player); 
   },
   
   playerUpdate: function (player) {
-    var plr = _.find(this.players, function (item) {
-      return item.id == player.id;
-    });
+    var plr = this.players[player.id]
+
     if(!plr) {
       console.log('Unkown update: ' +player.id);
       return;
@@ -61,6 +58,15 @@ var Game = {
     this.canvas.drawPlayers(this.players);
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
+  },
+
+  _getPlayers: function (players) {
+    if(_.isEmpty(players)) return players;
+    var hash = {};
+    _.each(players, function (player) {
+      hash[player.id] = new Player(player);
+    }.bind(this));
+    return hash;
   }
 }
 

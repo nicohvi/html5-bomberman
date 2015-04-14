@@ -25006,16 +25006,18 @@ var Canvas = (function () {
   }, {
     key: 'drawPlayers',
     value: function drawPlayers(players) {
+      var charCanvas = this.canvases[1],
+          ctx = charCanvas.get(0).getContext('2d');
+
+      ctx.clearRect(0, 0, charCanvas.width(), charCanvas.height());
       _.each(players, (function (player) {
-        this._drawPlayer(player);
+        this._drawPlayer(player, ctx);
       }).bind(this));
     }
   }, {
     key: '_drawPlayer',
-    value: function _drawPlayer(player) {
+    value: function _drawPlayer(player, ctx) {
       var frame = Math.floor(player.frame / MOVE_ANIM_SPEED),
-          charCanvas = this.canvases[1],
-          ctx = charCanvas.get(0).getContext('2d'),
           frameX,
           frameY,
           x,
@@ -25036,7 +25038,7 @@ var Canvas = (function () {
       y = Math.round(player.y * SQUARE_SIZE) - CHAR_Y;
 
       sprite = this.charSprites[player.character];
-      ctx.clearRect(0, 0, charCanvas.width(), charCanvas.height());
+
       // TODO
       if (frameY < 8) {
         ctx.drawImage(sprite, frameX * CHAR_WIDTH, frameY * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT, x, y, CHAR_WIDTH, CHAR_HEIGHT);
@@ -25064,7 +25066,7 @@ function getTicks() {
 var Game = {
   init: function init(data) {
     this.lastTick = getTicks();
-    this.players = [];
+    this.players = this._getPlayers(data.players);
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout((function () {
@@ -25075,29 +25077,27 @@ var Game = {
   },
 
   playerJoin: function playerJoin(player) {
+    console.log('player join');
     var plr = new Player(player);
-    this.players.push(plr);
+    this.players[player.id] = plr;
   },
 
   playerLeave: function playerLeave(id) {
+    console.log('player leave');
     if (_.isEmpty(this.players)) {
       return;
-    }this.players = _.filter(this.players, function (player) {
-      return player.id != id;
-    });
+    }delete this.players[id];
   },
 
   playerSpawn: function playerSpawn(player) {
-    var plr = _.find(this.players, function (item) {
-      return item.id == player.id;
-    });
+    console.log('player spawn');
+    var plr = this.players[player.id];
     plr.update(player);
   },
 
   playerUpdate: function playerUpdate(player) {
-    var plr = _.find(this.players, function (item) {
-      return item.id == player.id;
-    });
+    var plr = this.players[player.id];
+
     if (!plr) {
       console.log('Unkown update: ' + player.id);
       return;
@@ -25117,6 +25117,16 @@ var Game = {
     this.canvas.drawPlayers(this.players);
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
+  },
+
+  _getPlayers: function _getPlayers(players) {
+    if (_.isEmpty(players)) {
+      return players;
+    }var hash = {};
+    _.each(players, (function (player) {
+      hash[player.id] = new Player(player);
+    }).bind(this));
+    return hash;
   }
 };
 
