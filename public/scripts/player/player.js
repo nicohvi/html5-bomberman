@@ -1,12 +1,26 @@
 var io  = require('socket.io-client');
 var $   = require('jquery');
+var _   = require('lodash');
+
+var _names = ['Frank', 'Timmy', 'Peter', 'Bent', 'Ben'];
+var _moves = ['up', 'down', 'left', 'right'];
 
 var Player = {
 
   init: function (opts) {
     this.socket = io.connect('/game');
-    this.name = 'Frank';
+    this.name = _.sample(_names);
     this.setupListeners.call(this);
+  },
+
+  moveRandomly: function () {
+    setInterval(function () {
+      var move = _.sample(_moves);
+      _.times(10, function () {
+        this.doMove(move)
+      }.bind(this));
+      this.socket.emit('stop-move');
+    }.bind(this), 500)
   },
 
   setupListeners: function () {
@@ -16,6 +30,7 @@ var Player = {
 
   onConnect: function () {
     this.socket.emit('join-game', { name: this.name });
+    this.moveRandomly();
   },
 
   onKeyDown: function (event) {
