@@ -1,7 +1,8 @@
 var _ = require('lodash');
 
-var Map = require('./Map');
-var Player = require('./Player');
+var Map     = require('./Map');
+var Player  = require('./Player');
+var Bomb    = require('./Bomb');
 
 function getTicks() {
   return new Date().getTime();
@@ -11,6 +12,7 @@ var Game = {
   init: function (data) {
     this.lastTick = getTicks();
     this.players = this._getPlayers(data.players);
+    this.bombs = {};
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout(function () { this.map.draw() }.bind(this), 500);
@@ -38,13 +40,24 @@ var Game = {
   
   playerUpdate: function (player) {
     var plr = this.players[player.id]
-
     if(!plr) {
       console.log('Unkown update: ' +player.id);
       return;
     }
     
     plr.update(player); 
+  },
+
+  bombPlace: function (bomb) {
+    this.bombs[bomb.id] = new Bomb(bomb);
+  },
+
+  bombExplode: function (data) {
+    console.log('bomb explode');
+    var bomb = this.bombs[data.bomb.id];
+    var affectedTiles = data.tiles; 
+    delete this.bombs[bomb.id];
+    this.canvas.dirtyTiles(data.dirtyTiles);
   },
 
   update: function () {
@@ -54,8 +67,13 @@ var Game = {
     _.each(this.players, function (player) {
       player.animationUpdate(delta);
     });
-    
+    _.each(this.bombs, function (bomb) {
+      bomb.animationUpdate(delta);
+    });
+   
     this.canvas.drawPlayers(this.players);
+    this.canvas.drawBombs(this.bombs);
+
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
   },

@@ -24954,6 +24954,10 @@ var Player = {
       case 37:
         this.doMove('left');
         break;
+      // space
+      case 32:
+        this.placeBomb();
+        break;
     }
   },
 
@@ -24965,6 +24969,11 @@ var Player = {
   doMove: function doMove(dir) {
     console.log('moving in dir: ' + dir);
     this.socket.emit('request-move', { dir: dir });
+  },
+
+  placeBomb: function placeBomb() {
+    console.log('placing bomb!');
+    this.socket.emit('place-bomb');
   },
 
   joinGame: function joinGame(data) {

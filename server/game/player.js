@@ -3,7 +3,6 @@ var UP = 38;
 var RIGHT = 39;
 var DOWN = 40;
 var SPACE = 32;
-var PLAYER_MOVE_SPEED = 0.125;
 var ORIENT_DOWN = 0;
 var ORIENT_UP = 1;
 var ORIENT_RIGHT = 2;
@@ -19,8 +18,8 @@ var moveAmount = 0.125;
           alive: false,
           spawnAt: 0, // time until spawn
           score: 0,
-          movement: {},
-          orient: ORIENT_DOWN
+          orient: ORIENT_DOWN,
+          cooldown: false
         },
 
         initialize: function(data) {
@@ -33,34 +32,7 @@ var moveAmount = 0.125;
           this.set('alive', true);
         },
 
-        update: function () {
-          var dx = 0,
-              dy = 0,
-              movement = this.get('movement');
-
-          if (!this.get('alive')) return;
-          
-          var speed = PLAYER_MOVE_SPEED;
-
-          if (movement[LEFT])   dx-=speed;
-          if (movement[RIGHT])  dx+=speed;
-          if (movement[UP])     dy-=speed;
-          if (movement[DOWN])   dy+=speed;
-          
-          var moving = movement[LEFT] || movement[RIGHT] || movement[UP] || movement[DOWN];
-
-          this.set('moving', moving===true);
-          return { dx: dx, dy: dy };
-        },
-
         stop: function () {
-          //console.log('stopping player ' +this.get('id'))
-          //var movement = this.get('movement')          
-          //movement[LEFT] = false;
-          //movement[RIGHT] = false;
-          //movement[UP] = false;
-          //movement[DOWN] = false;
-          //this.set('movement', movement)
           this.set('moving', false)
         },
 
@@ -85,29 +57,6 @@ var moveAmount = 0.125;
       
           return { dx: dx, dy: dy };
         },    
-  
-        input: function (data) {
-          var movement = this.get('movement');
-
-          switch(data.dir) {
-            case "left":
-              movement[LEFT] = true;
-              break;
-            case "right":
-              movement[RIGHT] = true;
-              break;
-            case "up":
-              movement[UP] = true;
-              break;
-            case "down":
-              movement[DOWN] = true;
-              break;
-          }
-        
-          console.log('input for player '+this.get('id'))
-          
-          this.set('movement', movement);
-        },
 
         deltaMove: function (dx, dy) {
           this.set('x', this.get('x') + dx);

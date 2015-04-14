@@ -15,6 +15,8 @@ var GameManager = {
     this.socket.on('player-leave', this.onPlayerLeave.bind(this));
     this.socket.on('player-spawn', this.onPlayerSpawn.bind(this));
     this.socket.on('player-update', this.onPlayerUpdate.bind(this));
+    this.socket.on('bomb-place', this.onBombPlace.bind(this));
+    this.socket.on('bomb-explode', this.onBombExplode.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
 
@@ -36,6 +38,14 @@ var GameManager = {
   
   onPlayerUpdate: function (data) {
     Game.playerUpdate(data.player);
+  },
+
+  onBombPlace: function (data) {
+    Game.bombPlace(data.bomb);
+  },
+
+  onBombExplode: function (data) {
+    Game.bombExplode(data.state);
   },
 
   onPong: function () {

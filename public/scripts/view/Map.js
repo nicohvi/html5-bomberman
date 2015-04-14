@@ -15,14 +15,14 @@ class Map {
       this.canvas.draw();
   }
   
-  setDirty (x, y, width, height) {
-    if(this.canvas)
-      this.canvas.addDirtyZone(x, y, width, height)
-  }
-
   getTile (x, y) {
     var index = (y * this.width) + x;
     return this.map[index]; 
+  }
+
+  updateTile (x, y, value) {
+    var index = (y * this.width) + x;
+    this.map = this.map.substr(0, index) + value + this.map.substr(index+1);
   }
   
 }

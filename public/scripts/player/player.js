@@ -57,6 +57,10 @@ var Player = {
       case 37:
         this.doMove('left')
         break;
+      // space
+      case 32:
+        this.placeBomb();
+        break;
     }
   },
 
@@ -68,6 +72,11 @@ var Player = {
   doMove: function (dir) {
     console.log('moving in dir: ' +dir);
     this.socket.emit('request-move', { dir: dir });
+  },
+
+  placeBomb: function () {
+    console.log('placing bomb!');
+    this.socket.emit('place-bomb');
   },
 
   joinGame: function (data) {

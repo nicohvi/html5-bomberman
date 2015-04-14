@@ -2,10 +2,7 @@ TILE_EMPTY = 0;
 TILE_BRICK = 1;
 TILE_SOLID = 2;
 
-
 SPAWNING_TIME = 5000;
-
-
 _ = require('underscore')._;
 Backbone = require('backbone');
 var util = require('util');
@@ -13,11 +10,7 @@ var assign = require('object-assign');
 
 var redis;
 
-require('./map.js');
 require('./game.js');
-require('./model.js');
-require("./player.js");
-
 
 var Server = Backbone.Model.extend({
 
@@ -35,6 +28,7 @@ var Server = Backbone.Model.extend({
         this.game = new Game({ redis: redis });
         this.game.on('player-spawn', this.playerSpawned.bind(this));
         this.game.on('player-update', this.playerUpdate.bind(this));
+        this.game.on('bomb-explode', this.bombExplode.bind(this));
 
         this.view = io.of('/view');
         this.view.on('connection', this.onViewConnection.bind(this));
@@ -78,14 +72,18 @@ var Server = Backbone.Model.extend({
 
       socket.on('request-move', function (data) {
         var player = this.game.playerMove(socketId, data);
-        if(typeof(player) != 'null')
-          this.playerUpdate(player);
+        this.playerUpdate(player);
       }.bind(this));
 
       socket.on('stop-move', function () {
         var player = this.game.playerStop(socketId);
         this.playerUpdate(player);
       }.bind(this))
+
+      socket.on('place-bomb', function () {
+        var bomb = this.game.placeBomb(socketId);
+        this.bombPlaced(bomb);
+      }.bind(this));
 
       socket.on('disconnect', function () {
         console.log('socketId: ' +socketId+ ' disconnected');
@@ -116,7 +114,17 @@ var Server = Backbone.Model.extend({
     },
 
     playerUpdate: function (player) {
+      if(player == null) return;
       this._viewUpdate('player-update', { player: player });
+    },
+
+    bombPlaced: function (bomb) {
+      if(bomb == null) return;
+      this._viewUpdate('bomb-place', { bomb: bomb });
+    },
+
+    bombExplode: function (data) {
+      this._viewUpdate('bomb-explode',{ state: data });
     },
 
     _generateSocketId: function () {

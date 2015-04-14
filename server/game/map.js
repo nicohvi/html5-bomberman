@@ -1,3 +1,7 @@
+var _ = require('lodash');
+
+var Tile = require('./tile');
+
 var TILE_EMPTY = 0,
     TILE_SOLID = 2,
     TILE_BRICK = 1;
@@ -51,25 +55,6 @@ var TILE_EMPTY = 0,
             };
         },
 
-        //getTileMap: function () {
-          //return { rows: this.w, columns: this.h, tileMap: this.tileMap };
-        //},
-
-        //generateTileMap: function () {
-          //var mapString = this.map.join("");
-          //var tileMap = new Array(this.h);
-          //var rowIndex = 0;
-          //for(var y=0; y < this.h; y++) {
-            //tileMap[y] = new Array(this.w);
-            //var columnIndex = 0;
-            //for(var x=rowIndex; x < this.w+rowIndex; x++) {
-              //tileMap[y][columnIndex] = mapString.charAt(x);
-              //columnIndex++;
-            //}
-            //rowIndex = rowIndex + this.w; 
-          //}
-          //return tileMap;
-        //}
     });
 
 
@@ -96,32 +81,41 @@ var TILE_EMPTY = 0,
             //return this.getTile(x - this.get('x'), y - this.get('y'));
         },
 
-        //canMove: function (floorX, floorY, girthX, girthY) {
-          //if(this.getTile(girthX, girthY) != TILE_EMPTY)
-            //return false;
-
-          //return true; 
-        //},
-
         canMove: function(x,y) {
           return this.getTile(x,y) == TILE_EMPTY;
         },
 
         getTile: function(x, y) {
-            // check bounds
-            if (x<0) return -1;
-            if (x>=this.get('width')) return -1;
-            if (y<0) return -1;
-            if (y>=this.get('height')) return -1;
+          if(this.get('width')  <= x < 0) return -1;
+          if(this.get('height') <= y < 0) return -1;
+          return this.get('map')[y * this.get('width') + x];
+        },
 
-            var c = this.get('map')[ y * this.get('width') + x ];
-            return c*1;
+        getTiles: function (x, y) {
+          var result = []
+          if(typeof(x) == 'object') {
+            result = _.map(x, function (xCoord) {
+              return new Tile(xCoord, y, this.getTile(xCoord, y));
+            }.bind(this));
+          } else if(typeof(y) == 'object') {
+            result = _.map(y, function (yCoord) {
+              return new Tile(x, yCoord, this.getTile(x, yCoord));
+            }.bind(this));;
+          }
+          return result;
+        },
+
+        updateMap: function (tiles) {
+          var map = this.get('map');
+          _.each(tiles, function (tile) {
+            var index = tile.y * this.get('width') + tile.x;
+            map = map.substr(0, index) + TILE_EMPTY + map.substr(index+1);
+          }.bind(this));
+          this.set('map', map);
         },
 
         getMap: function() {
             return {
-                //x: this.get('x'),
-                //y: this.get('y'),
                 width: this.get('width'),
                 height: this.get('height'),
                 map: this.get('map')

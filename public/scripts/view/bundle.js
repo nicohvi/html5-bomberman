@@ -24887,6 +24887,36 @@ if (typeof define === "function" && define.amd) {
 }
 })();
 },{}],4:[function(require,module,exports){
+"use strict";
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var Bomb = (function () {
+  function Bomb(options) {
+    _classCallCheck(this, Bomb);
+
+    this.x = options.x;
+    this.y = options.y;
+    this.id = options.id;
+    this.playerId = options.playerId;
+    this.frame = 0;
+  }
+
+  _createClass(Bomb, [{
+    key: "animationUpdate",
+    value: function animationUpdate(delta) {
+      this.frame += delta;
+    }
+  }]);
+
+  return Bomb;
+})();
+
+module.exports = Bomb;
+
+},{}],5:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -24903,7 +24933,8 @@ var SQUARE_SIZE = 16,
     CHAR_HEIGHT = 22,
     CHAR_X = 11,
     CHAR_Y = 17,
-    MOVE_ANIM_SPEED = 0.1;
+    MOVE_ANIM_SPEED = 0.1,
+    BOMB_ANIM_SPEED = 0.1;
 
 var Canvas = (function () {
   function Canvas(map) {
@@ -24916,7 +24947,7 @@ var Canvas = (function () {
     this.map = map;
     this.initialized = false;
 
-    // map TODO: why 2?
+    // map
     this.canvases[0] = this._canvas(VIEW_WIDTH * SQUARE_SIZE, VIEW_HEIGHT * SQUARE_SIZE, 0);
 
     // sprites
@@ -24938,18 +24969,27 @@ var Canvas = (function () {
 
   _createClass(Canvas, [{
     key: 'draw',
+
+    // init
     value: function draw() {
       this.drawMap();
-      this.drawPlayers();
-      //this._drawFlames();
-      //this._drawBombs();
-      //this._drawPlayers();
-      //this._drawBreakings();
+    }
+  }, {
+    key: 'dirtyTiles',
+    value: function dirtyTiles(tiles) {
+      _.each(tiles, (function (tile) {
+        console.log('dirty tile: ' + tile.x + ', ' + tile.y);
+        var x = Math.floor(tile.x),
+            y = Math.floor(tile.y);
+
+        this.map.updateTile(x, y, '0');
+        this.addDirtyZone(x, y, 1, 1);
+      }).bind(this));
+      this.drawMap();
     }
   }, {
     key: 'addDirtyZone',
     value: function addDirtyZone(x, y, width, height) {
-      //if(this.repaint) return;
 
       if (typeof x == 'undefined') this.repaint = true;else if (typeof width == 'undefined') {
         width = 1;
@@ -24980,8 +25020,6 @@ var Canvas = (function () {
           ctx = mapCanvas.getContext('2d'),
           tileSprite = this.tileSprite,
           drawnTiles = 0;
-      //x           = Math.floor(this.viewport.x),
-      //y           = Math.floor(this.viewport.y),
 
       if (this.repaint) this.addDirtyZone(0, 0, this.map.width, this.map.height);
 
@@ -24993,7 +25031,6 @@ var Canvas = (function () {
             var cx = j + zone.x,
                 cy = k + zone.y,
                 tile = this.map.getTile(cx, cy);
-
             ctx.drawImage(tileSprite, tile * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, cx * SQUARE_SIZE, cy * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
             drawnTiles++;
           } // k
@@ -25044,6 +25081,23 @@ var Canvas = (function () {
         ctx.drawImage(sprite, frameX * CHAR_WIDTH, frameY * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT, x, y, CHAR_WIDTH, CHAR_HEIGHT);
       }
     }
+  }, {
+    key: 'drawBombs',
+    value: function drawBombs(bombs) {
+      var ctx = this.canvases[1].get(0).getContext('2d');
+      _.each(bombs, (function (bomb) {
+        this._drawBomb(bomb, ctx);
+      }).bind(this));
+    }
+  }, {
+    key: '_drawBomb',
+    value: function _drawBomb(bomb, ctx) {
+      var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
+          x = Math.floor(bomb.x) * SQUARE_SIZE,
+          y = Math.floor(bomb.y) * SQUARE_SIZE;
+
+      ctx.drawImage(this.bombSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
+    }
   }]);
 
   return Canvas;
@@ -25051,13 +25105,14 @@ var Canvas = (function () {
 
 module.exports = Canvas;
 
-},{"jquery":1,"lodash":2}],5:[function(require,module,exports){
+},{"jquery":1,"lodash":2}],6:[function(require,module,exports){
 'use strict';
 
 var _ = require('lodash');
 
 var Map = require('./Map');
 var Player = require('./Player');
+var Bomb = require('./Bomb');
 
 function getTicks() {
   return new Date().getTime();
@@ -25067,6 +25122,7 @@ var Game = {
   init: function init(data) {
     this.lastTick = getTicks();
     this.players = this._getPlayers(data.players);
+    this.bombs = {};
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout((function () {
@@ -25097,13 +25153,24 @@ var Game = {
 
   playerUpdate: function playerUpdate(player) {
     var plr = this.players[player.id];
-
     if (!plr) {
       console.log('Unkown update: ' + player.id);
       return;
     }
 
     plr.update(player);
+  },
+
+  bombPlace: function bombPlace(bomb) {
+    this.bombs[bomb.id] = new Bomb(bomb);
+  },
+
+  bombExplode: function bombExplode(data) {
+    console.log('bomb explode');
+    var bomb = this.bombs[data.bomb.id];
+    var affectedTiles = data.tiles;
+    delete this.bombs[bomb.id];
+    this.canvas.dirtyTiles(data.dirtyTiles);
   },
 
   update: function update() {
@@ -25113,8 +25180,13 @@ var Game = {
     _.each(this.players, function (player) {
       player.animationUpdate(delta);
     });
+    _.each(this.bombs, function (bomb) {
+      bomb.animationUpdate(delta);
+    });
 
     this.canvas.drawPlayers(this.players);
+    this.canvas.drawBombs(this.bombs);
+
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
   },
@@ -25132,7 +25204,7 @@ var Game = {
 
 module.exports = Game;
 
-},{"./Map":7,"./Player":8,"lodash":2}],6:[function(require,module,exports){
+},{"./Bomb":4,"./Map":8,"./Player":9,"lodash":2}],7:[function(require,module,exports){
 'use strict';
 
 var io = require('socket.io-client');
@@ -25152,6 +25224,8 @@ var GameManager = {
     this.socket.on('player-leave', this.onPlayerLeave.bind(this));
     this.socket.on('player-spawn', this.onPlayerSpawn.bind(this));
     this.socket.on('player-update', this.onPlayerUpdate.bind(this));
+    this.socket.on('bomb-place', this.onBombPlace.bind(this));
+    this.socket.on('bomb-explode', this.onBombExplode.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
 
@@ -25175,13 +25249,21 @@ var GameManager = {
     Game.playerUpdate(data.player);
   },
 
+  onBombPlace: function onBombPlace(data) {
+    Game.bombPlace(data.bomb);
+  },
+
+  onBombExplode: function onBombExplode(data) {
+    Game.bombExplode(data.state);
+  },
+
   onPong: function onPong() {
     console.log('pong');
   } };
 
 module.exports = GameManager;
 
-},{"./Game":5,"socket.io-client":3}],7:[function(require,module,exports){
+},{"./Game":6,"socket.io-client":3}],8:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -25206,15 +25288,16 @@ var Map = (function () {
       if (this.canvas) this.canvas.draw();
     }
   }, {
-    key: 'setDirty',
-    value: function setDirty(x, y, width, height) {
-      if (this.canvas) this.canvas.addDirtyZone(x, y, width, height);
-    }
-  }, {
     key: 'getTile',
     value: function getTile(x, y) {
       var index = y * this.width + x;
       return this.map[index];
+    }
+  }, {
+    key: 'updateTile',
+    value: function updateTile(x, y, value) {
+      var index = y * this.width + x;
+      this.map = this.map.substr(0, index) + value + this.map.substr(index + 1);
     }
   }]);
 
@@ -25223,7 +25306,7 @@ var Map = (function () {
 
 module.exports = Map;
 
-},{"./Canvas":4}],8:[function(require,module,exports){
+},{"./Canvas":5}],9:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -25266,7 +25349,7 @@ var Player = (function () {
 
 module.exports = Player;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var $ = require('jquery');
@@ -25276,4 +25359,4 @@ $(document).ready(function () {
   GameManager.init();
 });
 
-},{"./GameManager":6,"jquery":1}]},{},[9]);
+},{"./GameManager":7,"jquery":1}]},{},[10]);

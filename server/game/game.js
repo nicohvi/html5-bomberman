@@ -1,29 +1,35 @@
 var assign = require('object-assign');
-var lo = require('lodash');
+var _ = require('lodash');
 var util = require('util');
+var BOMB_TIMER = 5000;
+var BOMB_STRENGTH = 4;
+var COOLDOWN_TIME = 1000;
 
+var Bomb = require('./bomb');
+// fix
+require('./player');
+require('./map');
 var PLAYER_GIRTH = 0.35;
+var bombId = 0;
 
 (function() {
 
-    const DIRECTIONS = [
-        {x: 1, y: 0, zero: true},
-        {x:-1, y: 0},
-        {x: 0, y: 1},
-        {x: 0, y:-1}
-    ];
+    //const DIRECTIONS = [
+        //{x: 1, y: 0, zero: true},
+        //{x:-1, y: 0},
+        //{x: 0, y: 1},
+        //{x: 0, y:-1}
+    //];
 
-    function getTicks() {
-        return new Date().getTime();
-    }
+    //function getTicks() {
+        //return new Date().getTime();
+    //}
 
     Game = Backbone.Model.extend({
 
-        bombs: null,
-        powerups: null,
-
         initialize: function(opt) {
             this.players = {};
+            this.bombs = {};
             this.redis = opt.redis;
             this.map = new Map();
 
@@ -77,9 +83,6 @@ var PLAYER_GIRTH = 0.35;
             return;
           }
           
-          //player.input(data);
-          //var delta = player.update();
-          //this.requestMove(player, delta);
           var delta = player.getMove(data.dir);
           if(this.requestMove(player, delta))
             return player;
@@ -108,81 +111,68 @@ var PLAYER_GIRTH = 0.35;
               newX = Math.floor(x + dx + this._direction(dx)*PLAYER_GIRTH),
               newY = Math.floor(y + dy + this._direction(dy)*PLAYER_GIRTH);
           // x-axis
-          
           if(!this.map.canMove(newX, floorY))
             dx = 0;
 
           // y-axis
           if(!this.map.canMove(floorX, newY))
             dy = 0;
-            
-          //if(!this.map.canMove(floorX, floorY, girthX, girthY))
-            //dx = 0;
-          //else 
-            //girthX = Math.floor(x + dx);
-
-          //if(!this.map.canMove(floorX, floorY, floorX, girthY))
-            //dy = 0;
+          
           if(dx != 0 || dy != 0) {
             player.deltaMove(dx, dy);
             return true;
           } else {
             return false;
           }
+        },
+
+        placeBomb: function (socketId) {
+          var player  = this.players[socketId],
+              bomb    = new Bomb(bombId++, player);
+
+          if(player.get('cooldown')) {
+            console.log('player is cooling down');
+            return null;
+          }
+        
+          player.set('cooldown', true); 
+          console.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
+
+          this.bombs[bomb.id] = bomb;
+          setTimeout(function () {this.bombExplode(bomb)}.bind(this),
+  BOMB_TIMER);
+          setTimeout(function () {this.clearCooldown(player)}.bind(this), COOLDOWN_TIME);
+          return bomb;
+        },
+
+        bombExplode: function (bomb) {
+          var tiles = [],
+                  x = Math.floor(bomb.x),
+                  y = Math.floor(bomb.y);
+
+          console.log('bomb exploding at: ' +bomb.x+ ", " +bomb.y);
+          
+          tiles = this.map.getTiles(_.range(x-BOMB_STRENGTH/2, x+BOMB_STRENGTH/2), y).concat(this.map.getTiles(x, _.range(y-BOMB_STRENGTH/2, y+BOMB_STRENGTH/2)));
+
+          dirtyTiles = _.filter(tiles, function (tile) {
+            return tile.value == parseInt(TILE_BRICK); 
+          });
+          
+          this.map.updateMap(dirtyTiles);
+          this.trigger(
+            'bomb-explode', 
+            { bomb: bomb, tiles: tiles, dirtyTiles: dirtyTiles }
+          );
+        },
+
+        clearCooldown: function (player) {
+          player.set('cooldown', false);
         }
-
-        //update: function() {
-          //var now = getTicks();
-          //var delta = (now - this.lastTick) / 1000;
-
-            //console.log('updating ' +_.size(this.players)+ ' players');
-          //_.each(this.players, function (player) {
-            //console.log('player ' +player.get('id')+ ' moving: ' +player.get('moving'))
-            //var update = player.update(delta);
-            //console.log('player ' +player.get('id')+ ' moving: ' +player.get('moving'))
-            //if(player.get('moving')) {
-              //this.requestMove(player, update); 
-            //}
-            //this.trigger('player-update', player);
-          //}.bind(this));     
-
-            // check bombs
-            //this.bombs.each(function(b) {
-                //if (b.get('timeTrigger')<=now) {
-                    //this.explodeBomb(b);
-                //}
-            //}, this);
-
-            // check player spawning
-            //_.each(this.players, function(p) {
-                //if (!p.get('alive') && p.get('spawnAt')<=now)
-                    //this.spawnPlayer(p);
-            //}, this);
-
-            //this.lastTick = now;
-            
-            //this.trigger('update', this.getState());
-        //}
     });
 
 
 })();
 
-
-        //spawnPlayer: function(p) {
-            //p.spawn();
-        //},
-
-        //onBombAdded: function(b) {
-            //b.set({
-                //timePlaced: this.lastTick,
-                //timeTrigger: this.lastTick + b.get('fuseTime')
-            //});
-        //},
-
-        //onPowerupAdded: function (p) {
-          //console.log('powerup added event'); 
-        //},
 
         //_chainBombs: function(b) {
             //this.bombs.remove(b);

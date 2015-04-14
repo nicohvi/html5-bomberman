@@ -1,4 +1,3 @@
-
 class Player {
   constructor(options) {
     this.x = options.x;

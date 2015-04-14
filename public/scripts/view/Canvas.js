@@ -8,7 +8,8 @@ var SQUARE_SIZE = 16,
     CHAR_HEIGHT = 22,
     CHAR_X = 11,
     CHAR_Y = 17,
-    MOVE_ANIM_SPEED = 0.1;
+    MOVE_ANIM_SPEED = 0.1,
+    BOMB_ANIM_SPEED = 0.1;
 
 class Canvas {
   constructor (map) {
@@ -19,7 +20,7 @@ class Canvas {
     this.map = map;
     this.initialized = false;
 
-    // map TODO: why 2? 
+    // map 
     this.canvases[0] = this._canvas( 
       (VIEW_WIDTH*SQUARE_SIZE), 
       (VIEW_HEIGHT*SQUARE_SIZE),
@@ -45,17 +46,24 @@ class Canvas {
     this.tileSprite   = this._loadSprite('../../sprites/tiles.png');
   }
 
+  // init
   draw () {
     this.drawMap();
-    this.drawPlayers();
-    //this._drawFlames();
-    //this._drawBombs();
-    //this._drawPlayers();
-    //this._drawBreakings();
+  }
+
+  dirtyTiles (tiles) {
+    _.each(tiles, function (tile) {
+      console.log('dirty tile: ' +tile.x+ ', ' +tile.y);
+      var x = Math.floor(tile.x),
+          y = Math.floor(tile.y);
+      
+      this.map.updateTile(x, y, "0");
+      this.addDirtyZone(x, y, 1, 1);
+    }.bind(this));
+    this.drawMap();
   }
 
   addDirtyZone (x, y, width, height) {
-    //if(this.repaint) return;
 
     if(typeof(x) == 'undefined')
       this.repaint = true
@@ -83,13 +91,12 @@ class Canvas {
     return $('<img src="'+path+'" />').get(0);
   }
 
+
   drawMap () {
     var mapCanvas   = this.canvases[0].get(0),
         ctx         = mapCanvas.getContext('2d'),
         tileSprite  = this.tileSprite,
         drawnTiles  = 0;
-        //x           = Math.floor(this.viewport.x),
-        //y           = Math.floor(this.viewport.y),
     
     if(this.repaint)
       this.addDirtyZone(0, 0, this.map.width, this.map.height)         
@@ -102,7 +109,6 @@ class Canvas {
           var cx    = j + zone.x,
               cy    = k + zone.y,
               tile  = this.map.getTile(cx, cy);
-          
           ctx.drawImage(tileSprite,
             tile * SQUARE_SIZE, 0, 
             SQUARE_SIZE, SQUARE_SIZE,
@@ -157,6 +163,21 @@ class Canvas {
     }
   }
 
+  drawBombs (bombs) {
+    var ctx = this.canvases[1].get(0).getContext('2d');
+    _.each(bombs, function (bomb) { this._drawBomb(bomb, ctx) }.bind(this));
+  }
+
+  _drawBomb (bomb, ctx) {
+    var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
+            x = Math.floor(bomb.x) * SQUARE_SIZE,
+            y = Math.floor(bomb.y) * SQUARE_SIZE;
+
+    ctx.drawImage(  this.bombSprite, frame*SQUARE_SIZE, 0,
+                    SQUARE_SIZE, SQUARE_SIZE, x, y,
+                    SQUARE_SIZE, SQUARE_SIZE);
+  }
+  
 }
 
 module.exports = Canvas;
