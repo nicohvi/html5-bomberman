@@ -91,19 +91,117 @@ var TILE_EMPTY = 0,
           return this.get('map')[y * this.get('width') + x];
         },
 
-        getTiles: function (x, y) {
-          var result = []
-          if(typeof(x) == 'object') {
-            result = _.map(x, function (xCoord) {
-              return new Tile(xCoord, y, this.getTile(xCoord, y));
-            }.bind(this));
-          } else if(typeof(y) == 'object') {
-            result = _.map(y, function (yCoord) {
-              return new Tile(x, yCoord, this.getTile(x, yCoord));
-            }.bind(this));;
+        getXBombTiles: function (xStart, xEnd, y) {
+          var result = [],
+              stop = false;
+
+          if(xStart > xEnd) {
+            for( var i = xStart; i >= xEnd; i--) {
+              var tile = this.getTile(i, y);
+              console.log('tile: ' +tile); 
+              if(stop) 
+                break;
+              switch (tile) {
+                case "0":
+                  result.push(new Tile(i, y, tile));
+                  break;
+                case "1":
+                  stop = true;
+                  result.push(new Tile(i, y, tile));
+                  break;
+                case "2":
+                  stop = true;
+                  break;
+              }
+            }
+          } else {
+            for(var i = xStart; i <= xEnd; i++) {
+              var tile = this.getTile(i, y);
+              if(stop) 
+                break;
+              switch (tile) {
+                case "0":
+                  result.push(new Tile(i, y, tile));
+                  break;
+                case "1":
+                  stop = true;
+                  result.push(new Tile(i, y, tile));
+                  break;
+                case "2":
+                  stop = true;
+                  break;
+                default: 
+                  break;
+              }
+            }  
           }
           return result;
         },
+
+        getYBombTiles: function (yStart, yEnd, x) {
+          var result = [],
+              stop = false;
+          if(yStart > yEnd) {
+            for( var i = yStart; i >= yEnd; i--) {
+              var tile = this.getTile(x, i);
+              if(stop)
+                break;
+              switch (tile) {
+                case "0":
+                  result.push(new Tile(x, i, tile));
+                  break;
+                case "1":
+                  stop = true;
+                  result.push(new Tile(x, i, tile));
+                  break;
+                case "2":
+                  stop = true;
+                  break;
+              }
+            }
+          } else {
+            for(var i = yStart; i <= yEnd; i++) {
+              if(stop)
+                break;
+              var tile = this.getTile(x, i);
+              switch (tile) {
+                case "0":
+                  result.push(new Tile(x, i, tile));
+                  break;
+                case "1":
+                  stop = true;
+                  result.push(new Tile(x, i, tile));
+                  break;
+                case "2":
+                  stop = true;
+                  break;
+              }
+            }  
+          }
+          return result;
+        },
+
+        //getTiles: function (x, y) {
+          //var result = [];
+          //if(typeof(x) == 'object') {
+            //var stop = false;
+            //result = _.map(x, function (xCoord) {
+              //if(!stop) {
+                //if(parseInt(tile) == 1) {
+                  //stop = true;
+                  //return new Tile(xCoord, y, this.getTile(xCoord, y));
+                //} else if (parseInt(tile) == 2 || parseInt(tile) == -1) {
+                  //stop = true;
+                //} else {
+                  //return new Tile(xCoord, y, this.getTile(xCoord, y));
+                //}
+              //}
+            //}.bind(this));
+          //} else if(typeof(y) == 'object') {
+            //this.getBombTiles(y, x);
+          //}
+          //return result;
+        //},
 
         updateMap: function (tiles) {
           var map = this.get('map');

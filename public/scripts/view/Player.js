@@ -7,9 +7,9 @@ class Player {
     this.name = options.name;
     this.score = options.score; 
     this.movement = options.movement;
-    this.alive = options.alive;
     this.moving = options.moving;
     this.frame = 0;
+    this.alive = true;
     this.character = 'betty';
   }
 
@@ -25,6 +25,10 @@ class Player {
     this.frame += delta;
   }
 
+  die () {
+    this.alive = false;
+    this.frame = 0;
+  }
 }
 
 module.exports = Player;

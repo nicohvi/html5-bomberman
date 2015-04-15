@@ -19,15 +19,18 @@ var Server = Backbone.Model.extend({
         this.socketId = 1;
         redis = opt.redis;
         this.views = [];
+
         if (redis) {
             redis.incr("counters.restarts");
             redis.set("stats.last-start-time", (new Date()).getTime());
         }
+
         io.set('log level', 1);
         
         this.game = new Game({ redis: redis });
         this.game.on('player-spawn', this.playerSpawned.bind(this));
         this.game.on('player-update', this.playerUpdate.bind(this));
+        this.game.on('player-die', this.playerDie.bind(this));
         this.game.on('bomb-explode', this.bombExplode.bind(this));
 
         this.view = io.of('/view');
@@ -69,10 +72,13 @@ var Server = Backbone.Model.extend({
         this.playerJoined(player);
         this.game.spawnPlayer(player);
       }.bind(this));
-
-      socket.on('request-move', function (data) {
+      
+      var moveHandler = _.debounce(function (data) {
         var player = this.game.playerMove(socketId, data);
         this.playerUpdate(player);
+      }.bind(this), 10)
+      socket.on('request-move', function (data) {
+        moveHandler.call(this, data); 
       }.bind(this));
 
       socket.on('stop-move', function () {
@@ -116,6 +122,11 @@ var Server = Backbone.Model.extend({
     playerUpdate: function (player) {
       if(player == null) return;
       this._viewUpdate('player-update', { player: player });
+    },
+
+    playerDie: function (player) {
+      if(player == null) return;
+      this._viewUpdate('player-die', { player: player });
     },
 
     bombPlaced: function (bomb) {

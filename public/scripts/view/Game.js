@@ -3,6 +3,7 @@ var _ = require('lodash');
 var Map     = require('./Map');
 var Player  = require('./Player');
 var Bomb    = require('./Bomb');
+var Flame   = require('./Flame');
 
 function getTicks() {
   return new Date().getTime();
@@ -13,6 +14,8 @@ var Game = {
     this.lastTick = getTicks();
     this.players = this._getPlayers(data.players);
     this.bombs = {};
+    this.flames = [];
+    this.breakings = [];
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout(function () { this.map.draw() }.bind(this), 500);
@@ -35,7 +38,7 @@ var Game = {
   playerSpawn: function (player) {
     console.log('player spawn')
     var plr = this.players[player.id];
-    plr.update(player); 
+    plr.update(player);
   },
   
   playerUpdate: function (player) {
@@ -43,9 +46,16 @@ var Game = {
     if(!plr) {
       console.log('Unkown update: ' +player.id);
       return;
-    }
-    
+    }  
     plr.update(player); 
+  },
+
+  playerDie: function (player) {
+    console.log('player die');
+    var plr = this.players[player.id];
+    if(!plr) return;
+    plr.die();
+    this._playSound('die');
   },
 
   bombPlace: function (bomb) {
@@ -54,9 +64,10 @@ var Game = {
 
   bombExplode: function (data) {
     console.log('bomb explode');
-    var bomb = this.bombs[data.bomb.id];
+    delete this.bombs[data.bomb.id];
+    
     var affectedTiles = data.tiles; 
-    delete this.bombs[bomb.id];
+    this.flames = this.flames.concat(this._addFlames(affectedTiles));
     this.canvas.dirtyTiles(data.dirtyTiles);
   },
 
@@ -67,10 +78,21 @@ var Game = {
     _.each(this.players, function (player) {
       player.animationUpdate(delta);
     });
+
     _.each(this.bombs, function (bomb) {
       bomb.animationUpdate(delta);
     });
    
+    this.flames = _.filter(this.flames, function (flame) {
+      return !flame.done;
+    });
+
+    _.each(this.flames, function (flame) {
+      flame.animationUpdate(delta);
+    });
+
+    this.canvas.clear();
+    this.canvas.drawFlames(this.flames);
     this.canvas.drawPlayers(this.players);
     this.canvas.drawBombs(this.bombs);
 
@@ -85,6 +107,17 @@ var Game = {
       hash[player.id] = new Player(player);
     }.bind(this));
     return hash;
+  },
+
+  _addFlames: function (tiles) {
+    return _.map(tiles, function(tile) {
+      return new Flame(tile);
+    });
+  },
+
+  _playSound: function (clip) {
+    var audio = new Audio('../../sounds/'+clip+'.wav');
+    audio.play();
   }
 }
 

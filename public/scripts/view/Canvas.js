@@ -9,7 +9,8 @@ var SQUARE_SIZE = 16,
     CHAR_X = 11,
     CHAR_Y = 17,
     MOVE_ANIM_SPEED = 0.1,
-    BOMB_ANIM_SPEED = 0.1;
+    BOMB_ANIM_SPEED = 0.1,
+    FLAME_ANIM_SPEED = 0.15;
 
 class Canvas {
   constructor (map) {
@@ -123,11 +124,17 @@ class Canvas {
     this.repaint = false;
   }
 
-  drawPlayers (players) {
+  clear () {
     var charCanvas = this.canvases[1],
         ctx = charCanvas.get(0).getContext('2d');
 
     ctx.clearRect(0,0, charCanvas.width(), charCanvas.height());
+  }
+
+  drawPlayers (players) {
+    var charCanvas = this.canvases[1],
+        ctx = charCanvas.get(0).getContext('2d');
+
     _.each(players, function (player) {
       this._drawPlayer(player, ctx);
     }.bind(this)); 
@@ -152,7 +159,7 @@ class Canvas {
     
     sprite = this.charSprites[player.character];
     
-    // TODO
+    // 8 is the last row in the spreadsheet.
     if(frameY < 8) {
       ctx.drawImage(sprite, 
         frameX * CHAR_WIDTH,  
@@ -177,6 +184,43 @@ class Canvas {
                     SQUARE_SIZE, SQUARE_SIZE, x, y,
                     SQUARE_SIZE, SQUARE_SIZE);
   }
+
+  drawFlames (flames) {
+    var ctx = this.canvases[1].get(0).getContext('2d');
+    _.each(flames, function (flame) { this._drawFlame(flame, ctx) }.bind(this));
+  }
+
+  _drawFlame (flame, ctx) {
+    var frame = Math.floor(flame.frame / FLAME_ANIM_SPEED),
+            x = Math.floor(flame.x) * SQUARE_SIZE,
+            y = Math.floor(flame.y) * SQUARE_SIZE;
+    
+    if (frame > 6) {
+      flame.done = true;
+      return;
+    }
+
+    if (frame > 3 ) frame = 6 - frame;
+
+    ctx.drawImage(  this.flameSprite, frame*SQUARE_SIZE, 0,
+                    SQUARE_SIZE, SQUARE_SIZE, x, y,
+                    SQUARE_SIZE, SQUARE_SIZE);
+  }
+
+  //drawBreakings (breakings) {
+     //var ctx = this.canvases[1].get(0).getContext('2d');
+    //_.each(breakings, function (breakings) { this._drawFlame(breaking, ctx) }.bind(this));   
+  //}
+
+  //_drawBreaking (breaking) {
+    //var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
+            //x = Math.floor(bomb.x) * SQUARE_SIZE,
+            //y = Math.floor(bomb.y) * SQUARE_SIZE;
+
+    //ctx.drawImage(  this.bombSprite, frame*SQUARE_SIZE, 0,
+                    //SQUARE_SIZE, SQUARE_SIZE, x, y,
+                    //SQUARE_SIZE, SQUARE_SIZE);
+  //}
   
 }
 

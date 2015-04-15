@@ -9,34 +9,33 @@ function getTick() {
   return new Date().getTime();
 }
 
-var Player = {
-
-  init: function (opts) {
+class Player {
+  constructor () {
     this.socket = io.connect('/game');
     this.name = _.sample(_names);
     this.setupListeners.call(this);
-  },
+  }
 
-  moveRandomly: function () {
+  moveRandomly () {
     setInterval(function () {
-       var move = _.throttle(this.doMove.bind(this, _.sample(_moves)), 100)
-      _.times(50, function () {
-        move.call(this);
-      }.bind(this))
-    }.bind(this), 1000);
-  },
+       var move = _.sample(_moves);
+       var doMove = this.doMove.bind(this, move)
+       var interval = setInterval(doMove, 10);
+      setTimeout( function () { clearInterval(interval); }, 1000);
+    }.bind(this), 2000);
+  }
 
-  setupListeners: function () {
+  setupListeners () {
     this.socket.on('connect', this.onConnect.bind(this));
     this.socket.on('joined-game', this.joinGame.bind(this));
- },
+  }
 
-  onConnect: function () {
+  onConnect () {
     this.socket.emit('join-game', { name: this.name });
     //this.moveRandomly();
-  },
+  }
 
-  onKeyDown: function (event) {
+  onKeyDown (event) {
     switch(event.which) {
       // down
       case 40: 
@@ -62,24 +61,24 @@ var Player = {
         this.placeBomb();
         break;
     }
-  },
+  }
 
-  onKeyUp: function (event) {
+  onKeyUp (event) {
     console.log('stop')
     this.socket.emit('stop-move');
-  },
+  }
 
-  doMove: function (dir) {
-    console.log('moving in dir: ' +dir);
+  doMove (dir) {
+    console.log('moving ' +this.name+ ' in dir: ' +dir);
     this.socket.emit('request-move', { dir: dir });
-  },
+  }
 
-  placeBomb: function () {
+  placeBomb () {
     console.log('placing bomb!');
     this.socket.emit('place-bomb');
-  },
+  }
 
-  joinGame: function (data) {
+  joinGame (data) {
     $(document).on('keydown', this.onKeyDown.bind(this)); 
     $(document).on('keyup', this.onKeyUp.bind(this));
     console.log('joined game');

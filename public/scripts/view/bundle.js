@@ -24934,7 +24934,8 @@ var SQUARE_SIZE = 16,
     CHAR_X = 11,
     CHAR_Y = 17,
     MOVE_ANIM_SPEED = 0.1,
-    BOMB_ANIM_SPEED = 0.1;
+    BOMB_ANIM_SPEED = 0.1,
+    FLAME_ANIM_SPEED = 0.15;
 
 var Canvas = (function () {
   function Canvas(map) {
@@ -25041,12 +25042,19 @@ var Canvas = (function () {
       this.repaint = false;
     }
   }, {
+    key: 'clear',
+    value: function clear() {
+      var charCanvas = this.canvases[1],
+          ctx = charCanvas.get(0).getContext('2d');
+
+      ctx.clearRect(0, 0, charCanvas.width(), charCanvas.height());
+    }
+  }, {
     key: 'drawPlayers',
     value: function drawPlayers(players) {
       var charCanvas = this.canvases[1],
           ctx = charCanvas.get(0).getContext('2d');
 
-      ctx.clearRect(0, 0, charCanvas.width(), charCanvas.height());
       _.each(players, (function (player) {
         this._drawPlayer(player, ctx);
       }).bind(this));
@@ -25076,7 +25084,7 @@ var Canvas = (function () {
 
       sprite = this.charSprites[player.character];
 
-      // TODO
+      // 8 is the last row in the spreadsheet.
       if (frameY < 8) {
         ctx.drawImage(sprite, frameX * CHAR_WIDTH, frameY * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT, x, y, CHAR_WIDTH, CHAR_HEIGHT);
       }
@@ -25098,6 +25106,46 @@ var Canvas = (function () {
 
       ctx.drawImage(this.bombSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
     }
+  }, {
+    key: 'drawFlames',
+    value: function drawFlames(flames) {
+      var ctx = this.canvases[1].get(0).getContext('2d');
+      _.each(flames, (function (flame) {
+        this._drawFlame(flame, ctx);
+      }).bind(this));
+    }
+  }, {
+    key: '_drawFlame',
+    value: function _drawFlame(flame, ctx) {
+      var frame = Math.floor(flame.frame / FLAME_ANIM_SPEED),
+          x = Math.floor(flame.x) * SQUARE_SIZE,
+          y = Math.floor(flame.y) * SQUARE_SIZE;
+
+      if (frame > 6) {
+        flame.done = true;
+        return;
+      }
+
+      if (frame > 3) frame = 6 - frame;
+
+      ctx.drawImage(this.flameSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
+    }
+
+    //drawBreakings (breakings) {
+    //var ctx = this.canvases[1].get(0).getContext('2d');
+    //_.each(breakings, function (breakings) { this._drawFlame(breaking, ctx) }.bind(this));  
+    //}
+
+    //_drawBreaking (breaking) {
+    //var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
+    //x = Math.floor(bomb.x) * SQUARE_SIZE,
+    //y = Math.floor(bomb.y) * SQUARE_SIZE;
+
+    //ctx.drawImage(  this.bombSprite, frame*SQUARE_SIZE, 0,
+    //SQUARE_SIZE, SQUARE_SIZE, x, y,
+    //SQUARE_SIZE, SQUARE_SIZE);
+    //}
+
   }]);
 
   return Canvas;
@@ -25106,6 +25154,35 @@ var Canvas = (function () {
 module.exports = Canvas;
 
 },{"jquery":1,"lodash":2}],6:[function(require,module,exports){
+"use strict";
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var Flame = (function () {
+  function Flame(options) {
+    _classCallCheck(this, Flame);
+
+    this.x = options.x;
+    this.y = options.y;
+    this.done = false;
+    this.frame = 0;
+  }
+
+  _createClass(Flame, [{
+    key: "animationUpdate",
+    value: function animationUpdate(delta) {
+      this.frame += delta;
+    }
+  }]);
+
+  return Flame;
+})();
+
+module.exports = Flame;
+
+},{}],7:[function(require,module,exports){
 'use strict';
 
 var _ = require('lodash');
@@ -25113,6 +25190,7 @@ var _ = require('lodash');
 var Map = require('./Map');
 var Player = require('./Player');
 var Bomb = require('./Bomb');
+var Flame = require('./Flame');
 
 function getTicks() {
   return new Date().getTime();
@@ -25123,6 +25201,8 @@ var Game = {
     this.lastTick = getTicks();
     this.players = this._getPlayers(data.players);
     this.bombs = {};
+    this.flames = [];
+    this.breakings = [];
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout((function () {
@@ -25157,8 +25237,16 @@ var Game = {
       console.log('Unkown update: ' + player.id);
       return;
     }
-
     plr.update(player);
+  },
+
+  playerDie: function playerDie(player) {
+    console.log('player die');
+    var plr = this.players[player.id];
+    if (!plr) {
+      return;
+    }plr.die();
+    this._playSound('die');
   },
 
   bombPlace: function bombPlace(bomb) {
@@ -25167,9 +25255,10 @@ var Game = {
 
   bombExplode: function bombExplode(data) {
     console.log('bomb explode');
-    var bomb = this.bombs[data.bomb.id];
+    delete this.bombs[data.bomb.id];
+
     var affectedTiles = data.tiles;
-    delete this.bombs[bomb.id];
+    this.flames = this.flames.concat(this._addFlames(affectedTiles));
     this.canvas.dirtyTiles(data.dirtyTiles);
   },
 
@@ -25180,10 +25269,21 @@ var Game = {
     _.each(this.players, function (player) {
       player.animationUpdate(delta);
     });
+
     _.each(this.bombs, function (bomb) {
       bomb.animationUpdate(delta);
     });
 
+    this.flames = _.filter(this.flames, function (flame) {
+      return !flame.done;
+    });
+
+    _.each(this.flames, function (flame) {
+      flame.animationUpdate(delta);
+    });
+
+    this.canvas.clear();
+    this.canvas.drawFlames(this.flames);
     this.canvas.drawPlayers(this.players);
     this.canvas.drawBombs(this.bombs);
 
@@ -25199,12 +25299,23 @@ var Game = {
       hash[player.id] = new Player(player);
     }).bind(this));
     return hash;
+  },
+
+  _addFlames: function _addFlames(tiles) {
+    return _.map(tiles, function (tile) {
+      return new Flame(tile);
+    });
+  },
+
+  _playSound: function _playSound(clip) {
+    var audio = new Audio('../../sounds/' + clip + '.wav');
+    audio.play();
   }
 };
 
 module.exports = Game;
 
-},{"./Bomb":4,"./Map":8,"./Player":9,"lodash":2}],7:[function(require,module,exports){
+},{"./Bomb":4,"./Flame":6,"./Map":9,"./Player":10,"lodash":2}],8:[function(require,module,exports){
 'use strict';
 
 var io = require('socket.io-client');
@@ -25224,6 +25335,7 @@ var GameManager = {
     this.socket.on('player-leave', this.onPlayerLeave.bind(this));
     this.socket.on('player-spawn', this.onPlayerSpawn.bind(this));
     this.socket.on('player-update', this.onPlayerUpdate.bind(this));
+    this.socket.on('player-die', this.onPlayerDie.bind(this));
     this.socket.on('bomb-place', this.onBombPlace.bind(this));
     this.socket.on('bomb-explode', this.onBombExplode.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
@@ -25249,6 +25361,10 @@ var GameManager = {
     Game.playerUpdate(data.player);
   },
 
+  onPlayerDie: function onPlayerDie(data) {
+    Game.playerDie(data.player);
+  },
+
   onBombPlace: function onBombPlace(data) {
     Game.bombPlace(data.bomb);
   },
@@ -25263,7 +25379,7 @@ var GameManager = {
 
 module.exports = GameManager;
 
-},{"./Game":6,"socket.io-client":3}],8:[function(require,module,exports){
+},{"./Game":7,"socket.io-client":3}],9:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -25306,7 +25422,7 @@ var Map = (function () {
 
 module.exports = Map;
 
-},{"./Canvas":5}],9:[function(require,module,exports){
+},{"./Canvas":5}],10:[function(require,module,exports){
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -25324,9 +25440,9 @@ var Player = (function () {
     this.name = options.name;
     this.score = options.score;
     this.movement = options.movement;
-    this.alive = options.alive;
     this.moving = options.moving;
     this.frame = 0;
+    this.alive = true;
     this.character = 'betty';
   }
 
@@ -25342,6 +25458,12 @@ var Player = (function () {
     value: function animationUpdate(delta) {
       this.frame += delta;
     }
+  }, {
+    key: 'die',
+    value: function die() {
+      this.alive = false;
+      this.frame = 0;
+    }
   }]);
 
   return Player;
@@ -25349,7 +25471,7 @@ var Player = (function () {
 
 module.exports = Player;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 var $ = require('jquery');
@@ -25359,4 +25481,4 @@ $(document).ready(function () {
   GameManager.init();
 });
 
-},{"./GameManager":7,"jquery":1}]},{},[10]);
+},{"./GameManager":8,"jquery":1}]},{},[11]);

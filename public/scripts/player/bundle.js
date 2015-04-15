@@ -24889,11 +24889,17 @@ if (typeof define === "function" && define.amd) {
 },{}],4:[function(require,module,exports){
 'use strict';
 
+var _ = require('lodash');
 var Player = require('./player');
-Player.init();
 
-},{"./player":5}],5:[function(require,module,exports){
+var player = new Player();
+
+},{"./player":5,"lodash":2}],5:[function(require,module,exports){
 'use strict';
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 var io = require('socket.io-client');
 var $ = require('jquery');
@@ -24906,83 +24912,99 @@ function getTick() {
   return new Date().getTime();
 }
 
-var Player = {
+var Player = (function () {
+  function Player() {
+    _classCallCheck(this, Player);
 
-  init: function init(opts) {
     this.socket = io.connect('/game');
     this.name = _.sample(_names);
     this.setupListeners.call(this);
-  },
-
-  moveRandomly: function moveRandomly() {
-    setInterval((function () {
-      var move = _.throttle(this.doMove.bind(this, _.sample(_moves)), 100);
-      _.times(50, (function () {
-        move.call(this);
-      }).bind(this));
-    }).bind(this), 1000);
-  },
-
-  setupListeners: function setupListeners() {
-    this.socket.on('connect', this.onConnect.bind(this));
-    this.socket.on('joined-game', this.joinGame.bind(this));
-  },
-
-  onConnect: function onConnect() {
-    this.socket.emit('join-game', { name: this.name });
-    //this.moveRandomly();
-  },
-
-  onKeyDown: function onKeyDown(event) {
-    switch (event.which) {
-      // down
-      case 40:
-        this.doMove('down');
-        //this.doMove({ x: 0, y: 1 });
-        break;
-      // right
-      case 39:
-        this.doMove('right');
-        //this.doMove({ x: 1, y: 0 });
-        break;
-      // up
-      case 38:
-        this.doMove('up');
-        //this.doMove({ x: 0, y: -1 });
-        break;
-      // left
-      case 37:
-        this.doMove('left');
-        break;
-      // space
-      case 32:
-        this.placeBomb();
-        break;
-    }
-  },
-
-  onKeyUp: function onKeyUp(event) {
-    console.log('stop');
-    this.socket.emit('stop-move');
-  },
-
-  doMove: function doMove(dir) {
-    console.log('moving in dir: ' + dir);
-    this.socket.emit('request-move', { dir: dir });
-  },
-
-  placeBomb: function placeBomb() {
-    console.log('placing bomb!');
-    this.socket.emit('place-bomb');
-  },
-
-  joinGame: function joinGame(data) {
-    $(document).on('keydown', this.onKeyDown.bind(this));
-    $(document).on('keyup', this.onKeyUp.bind(this));
-    console.log('joined game');
   }
 
-};
+  _createClass(Player, [{
+    key: 'moveRandomly',
+    value: function moveRandomly() {
+      setInterval((function () {
+        var move = _.sample(_moves);
+        var doMove = this.doMove.bind(this, move);
+        var interval = setInterval(doMove, 10);
+        setTimeout(function () {
+          clearInterval(interval);
+        }, 1000);
+      }).bind(this), 2000);
+    }
+  }, {
+    key: 'setupListeners',
+    value: function setupListeners() {
+      this.socket.on('connect', this.onConnect.bind(this));
+      this.socket.on('joined-game', this.joinGame.bind(this));
+    }
+  }, {
+    key: 'onConnect',
+    value: function onConnect() {
+      this.socket.emit('join-game', { name: this.name });
+      //this.moveRandomly();
+    }
+  }, {
+    key: 'onKeyDown',
+    value: function onKeyDown(event) {
+      switch (event.which) {
+        // down
+        case 40:
+          this.doMove('down');
+          //this.doMove({ x: 0, y: 1 });
+          break;
+        // right
+        case 39:
+          this.doMove('right');
+          //this.doMove({ x: 1, y: 0 });
+          break;
+        // up
+        case 38:
+          this.doMove('up');
+          //this.doMove({ x: 0, y: -1 });
+          break;
+        // left
+        case 37:
+          this.doMove('left');
+          break;
+        // space
+        case 32:
+          this.placeBomb();
+          break;
+      }
+    }
+  }, {
+    key: 'onKeyUp',
+    value: function onKeyUp(event) {
+      console.log('stop');
+      this.socket.emit('stop-move');
+    }
+  }, {
+    key: 'doMove',
+    value: function doMove(dir) {
+      console.log('moving ' + this.name + ' in dir: ' + dir);
+      this.socket.emit('request-move', { dir: dir });
+    }
+  }, {
+    key: 'placeBomb',
+    value: function placeBomb() {
+      console.log('placing bomb!');
+      this.socket.emit('place-bomb');
+    }
+  }, {
+    key: 'joinGame',
+    value: function joinGame(data) {
+      $(document).on('keydown', this.onKeyDown.bind(this));
+      $(document).on('keyup', this.onKeyUp.bind(this));
+      console.log('joined game');
+    }
+  }]);
+
+  return Player;
+})();
+
+;
 
 module.exports = Player;
 

@@ -4,6 +4,7 @@ var util = require('util');
 var BOMB_TIMER = 5000;
 var BOMB_STRENGTH = 4;
 var COOLDOWN_TIME = 1000;
+var SPAWNING_TIME = 6000;
 
 var Bomb = require('./bomb');
 // fix
@@ -14,17 +15,6 @@ var bombId = 0;
 
 (function() {
 
-    //const DIRECTIONS = [
-        //{x: 1, y: 0, zero: true},
-        //{x:-1, y: 0},
-        //{x: 0, y: 1},
-        //{x: 0, y:-1}
-    //];
-
-    //function getTicks() {
-        //return new Date().getTime();
-    //}
-
     Game = Backbone.Model.extend({
 
         initialize: function(opt) {
@@ -32,12 +22,6 @@ var bombId = 0;
             this.bombs = {};
             this.redis = opt.redis;
             this.map = new Map();
-
-            //this.bombs = new BombCollection();
-            //this.bombs.on('add', this.onBombAdded, this);
-
-            //this.powerups = new PowerupCollection();
-            //this.powerups.on('add', this.onPowerupAdded, this);
         },
       
         getState: function () {
@@ -82,8 +66,10 @@ var bombId = 0;
             console.log('player not found')
             return;
           }
-          
+
+          // TODO: use delta and input throttling
           var delta = player.getMove(data.dir);
+
           if(this.requestMove(player, delta))
             return player;
           else
@@ -152,22 +138,46 @@ var bombId = 0;
 
           console.log('bomb exploding at: ' +bomb.x+ ", " +bomb.y);
           
-          tiles = this.map.getTiles(_.range(x-BOMB_STRENGTH/2, x+BOMB_STRENGTH/2), y).concat(this.map.getTiles(x, _.range(y-BOMB_STRENGTH/2, y+BOMB_STRENGTH/2)));
+          tiles = this.getBombTiles(x, y);
+
+          tiles = _.filter(tiles, function (tile) {
+            return typeof(tile) != "undefined";
+          });
 
           dirtyTiles = _.filter(tiles, function (tile) {
-            return tile.value == parseInt(TILE_BRICK); 
+            return tile.value == TILE_BRICK; 
           });
-          
+
           this.map.updateMap(dirtyTiles);
+          
           this.trigger(
             'bomb-explode', 
             { bomb: bomb, tiles: tiles, dirtyTiles: dirtyTiles }
           );
+          
+          _.each(this.players, function (player) {
+            var alive = player.watchOut(tiles);
+            if(!alive) {
+              setTimeout(function () { this.spawnPlayer(player); }.bind(this), SPAWNING_TIME);
+              this.trigger('player-die', player); 
+            }
+          }.bind(this));
+        },
+
+        getBombTiles: function (x,y) {
+          var result = [];
+          result = result.concat(this.map.getXBombTiles(x, x-BOMB_STRENGTH, y));
+          result = result.concat(this.map.getXBombTiles(x, x +BOMB_STRENGTH, y));
+          result = result.concat(this.map.getYBombTiles(y, y-BOMB_STRENGTH, x));
+          result = result.concat(this.map.getYBombTiles(y, y+BOMB_STRENGTH, x));
+          console.log(util.inspect(result));
+          return result;
         },
 
         clearCooldown: function (player) {
           player.set('cooldown', false);
         }
+
     });
 
 

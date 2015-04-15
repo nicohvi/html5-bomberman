@@ -1,2 +1,4 @@
+var _ = require('lodash');
 var Player = require('./player');
-Player.init();
+
+var player = new Player();
