@@ -5,6 +5,8 @@ var Player  = require('./Player');
 var Bomb    = require('./Bomb');
 var Flame   = require('./Flame');
 
+var Leaderboard = require('../components/leaderboard');
+
 function getTicks() {
   return new Date().getTime();
 } 
@@ -14,12 +16,12 @@ var Game = {
     this.lastTick = getTicks();
     this.players = this._getPlayers(data.players);
     this.bombs = {};
-    this.flames = [];
-    this.breakings = [];
+    this.flames = {};
     this.map = new Map(data.map);
     this.canvas = this.map.canvas;
     setTimeout(function () { this.map.draw() }.bind(this), 500);
     // TODO: onLoadedSprite
+    Leaderboard.load(this.players);
     this.update();
   },
 
@@ -27,12 +29,14 @@ var Game = {
     console.log('player join')
     var plr = new Player(player);
     this.players[player.id] = plr;
+    Leaderboard.load(this.players);
   },
 
   playerLeave: function (id) {
     console.log('player leave')
     if(_.isEmpty(this.players)) return;
     delete this.players[id];
+    Leaderboard.load(this.players);
   },
 
   playerSpawn: function (player) {
@@ -50,12 +54,22 @@ var Game = {
     plr.update(player); 
   },
 
-  playerDie: function (player) {
-    console.log('player die');
+  playerDie: function (player, suicide) {
+    console.log('player died');
     var plr = this.players[player.id];
     if(!plr) return;
     plr.die();
-    this._playSound('die');
+    
+    if(suicide)
+      this._playSound('suicide');
+    else {
+      this._playSound('die');
+    }
+  },
+
+  playerScore: function (player) {
+    this.players[player.id].updateScore(player.score);
+    Leaderboard.load(this.players);
   },
 
   bombPlace: function (bomb) {
@@ -66,9 +80,21 @@ var Game = {
     console.log('bomb explode');
     delete this.bombs[data.bomb.id];
     
-    var affectedTiles = data.tiles; 
-    this.flames = this.flames.concat(this._addFlames(affectedTiles));
     this.canvas.dirtyTiles(data.dirtyTiles);
+  },
+
+  flameSpawn: function (flames) {
+    console.log('flames biatch');
+    _.forEach(flames, function (flame) {
+      this.flames[flame.id] = new Flame(flame);
+    }.bind(this));
+  },
+
+  flameDie: function (flames) {
+    console.log('flames done');
+    _.forEach(flames, function (flame) {
+      delete this.flames[flame.id];
+    }.bind(this));
   },
 
   update: function () {
@@ -83,10 +109,6 @@ var Game = {
       bomb.animationUpdate(delta);
     });
    
-    this.flames = _.filter(this.flames, function (flame) {
-      return !flame.done;
-    });
-
     _.each(this.flames, function (flame) {
       flame.animationUpdate(delta);
     });
@@ -95,9 +117,10 @@ var Game = {
     this.canvas.drawFlames(this.flames);
     this.canvas.drawPlayers(this.players);
     this.canvas.drawBombs(this.bombs);
-
+    
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
+    
   },
 
   _getPlayers: function (players) {

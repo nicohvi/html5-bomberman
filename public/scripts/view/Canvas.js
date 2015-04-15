@@ -195,11 +195,6 @@ class Canvas {
             x = Math.floor(flame.x) * SQUARE_SIZE,
             y = Math.floor(flame.y) * SQUARE_SIZE;
     
-    if (frame > 6) {
-      flame.done = true;
-      return;
-    }
-
     if (frame > 3 ) frame = 6 - frame;
 
     ctx.drawImage(  this.flameSprite, frame*SQUARE_SIZE, 0,
@@ -207,21 +202,6 @@ class Canvas {
                     SQUARE_SIZE, SQUARE_SIZE);
   }
 
-  //drawBreakings (breakings) {
-     //var ctx = this.canvases[1].get(0).getContext('2d');
-    //_.each(breakings, function (breakings) { this._drawFlame(breaking, ctx) }.bind(this));   
-  //}
-
-  //_drawBreaking (breaking) {
-    //var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
-            //x = Math.floor(bomb.x) * SQUARE_SIZE,
-            //y = Math.floor(bomb.y) * SQUARE_SIZE;
-
-    //ctx.drawImage(  this.bombSprite, frame*SQUARE_SIZE, 0,
-                    //SQUARE_SIZE, SQUARE_SIZE, x, y,
-                    //SQUARE_SIZE, SQUARE_SIZE);
-  //}
-  
 }
 
 module.exports = Canvas;

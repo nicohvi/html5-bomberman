@@ -21,6 +21,10 @@ class Player {
     this.alive = options.alive;
   }
 
+  updateScore (score) {
+    this.score = score;
+  }
+
   animationUpdate (delta) {
     this.frame += delta;
   }

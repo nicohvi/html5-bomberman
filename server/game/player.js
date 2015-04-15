@@ -18,7 +18,7 @@ var moveAmount = 0.125;
           alive: false,
           score: 0,
           orient: ORIENT_DOWN,
-          cooldown: false
+          cooldown: false,
         },
 
         initialize: function(data) {
@@ -72,25 +72,33 @@ var moveAmount = 0.125;
           this.set('moving', true);
         },
 
-        watchOut: function (tiles) {
+        collision: function (tiles) {
+          var collision = null;
+          if(!this.get('alive'))
+            return collision;
+
           var xCoord  = Math.floor(this.get('x')),
               yCoord  = Math.floor(this.get('y'));
         
           _.forEach(tiles, function (tile) {
+            if(collision)
+              return false; 
             if(tile.x == xCoord && tile.y == yCoord) {
-              console.log(  'player ' +this.get('name')+ ' dies at '
+              console.log(  'player ' +this.get('name')+ ' collides at '
                             +tile.x+ ', ' +tile.y);
-              this.die();
-              return false;
+              collision = tile;
             }
           }.bind(this));
-
-          return this.get('alive');
+          return collision;
         },
 
         die: function() {
-            this.set('alive', false);
+          this.set('alive', false);
         },
+
+        updateScore: function (score) {
+          this.set('score', this.get('score') + score);
+        }
 
     });
 })();

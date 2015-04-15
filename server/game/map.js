@@ -4,7 +4,9 @@ var Tile = require('./tile');
 
 var TILE_EMPTY = 0,
     TILE_SOLID = 2,
-    TILE_BRICK = 1;
+    TILE_BRICK = 1,
+    TILE_BOMB  = 3;
+
 (function() {
     // TODO: CLEAN THIS SHIT UP
 
@@ -61,9 +63,7 @@ var TILE_EMPTY = 0,
     Map = Backbone.Model.extend({
         defaults: {
             width: 50,
-            height: 40,
-            //x: 5,
-            //y: 3
+            height: 40
         },
 
         initialize: function() {
@@ -72,13 +72,19 @@ var TILE_EMPTY = 0,
                 h: this.get('height')
             });
             var map = mapGenerator.getMap();
-            //this.tileMap = mapGenerator.getTileMap();
             this.set(map);
         },
 
+        placeBomb: function (bomb) {
+          this.setTile(bomb.x, bomb.y, TILE_BOMB); 
+        },     
+
+        removeBomb: function (bomb) {
+          this.setTile(bomb.x, bomb.y, TILE_EMPTY);
+        },   
+
         getAbsTile: function(x, y) {
             return this.getTile(x, y);
-            //return this.getTile(x - this.get('x'), y - this.get('y'));
         },
 
         canMove: function(x,y) {
@@ -91,6 +97,20 @@ var TILE_EMPTY = 0,
           return this.get('map')[y * this.get('width') + x];
         },
 
+        setTile: function (x, y, value) {
+          x = Math.floor(x),
+          y = Math.floor(y);
+          if(this.get('width')  <= x < 0) return;
+          if(this.get('height') <= y < 0) return;
+
+          var index = y * this.get('width') + x;
+          var map = this.get('map'); 
+  
+          console.log('Setting tile ' +x+ ', ' +y+ ' to ' +value);
+          map = map.substr(0, index) + value + map.substr(index+1);
+          this.set('map', map);
+        },
+
         getXBombTiles: function (xStart, xEnd, y) {
           var result = [],
               stop = false;
@@ -98,7 +118,6 @@ var TILE_EMPTY = 0,
           if(xStart > xEnd) {
             for( var i = xStart; i >= xEnd; i--) {
               var tile = this.getTile(i, y);
-              console.log('tile: ' +tile); 
               if(stop) 
                 break;
               switch (tile) {
@@ -181,35 +200,11 @@ var TILE_EMPTY = 0,
           return result;
         },
 
-        //getTiles: function (x, y) {
-          //var result = [];
-          //if(typeof(x) == 'object') {
-            //var stop = false;
-            //result = _.map(x, function (xCoord) {
-              //if(!stop) {
-                //if(parseInt(tile) == 1) {
-                  //stop = true;
-                  //return new Tile(xCoord, y, this.getTile(xCoord, y));
-                //} else if (parseInt(tile) == 2 || parseInt(tile) == -1) {
-                  //stop = true;
-                //} else {
-                  //return new Tile(xCoord, y, this.getTile(xCoord, y));
-                //}
-              //}
-            //}.bind(this));
-          //} else if(typeof(y) == 'object') {
-            //this.getBombTiles(y, x);
-          //}
-          //return result;
-        //},
-
         updateMap: function (tiles) {
           var map = this.get('map');
           _.each(tiles, function (tile) {
-            var index = tile.y * this.get('width') + tile.x;
-            map = map.substr(0, index) + TILE_EMPTY + map.substr(index+1);
+            this.setTile(tile.x, tile.y, TILE_EMPTY);
           }.bind(this));
-          this.set('map', map);
         },
 
         getMap: function() {
@@ -220,89 +215,25 @@ var TILE_EMPTY = 0,
             }
         },
 
-        //getTileMap: function () {
-          //return this.tileMap;
-        //},
-
-        //setAbsMap: function(x, y, c, silent) {
-            //if (silent === undefined) silent = false;
-            //var ix = (y - this.get('y')) * this.get('width')// + (x - this.get('x'));
-            //var map = this.get('map');
-            //this.set('map', map.substr(0, ix) + c + map.substr(ix+1), {silent: silent});
-        //},
-
         getValidSpawnLocation: function() {
             var valid = false;
             do {
-                var x = Math.floor(Math.random()*this.get('width')) // + this.get('x');
-                var y = Math.floor(Math.random()*this.get('height')) // + this.get('y');
+                var x = Math.floor(Math.random()*this.get('width')),
+                    y = Math.floor(Math.random()*this.get('height'));
 
                 console.log("trying to spawn at " + x + "," + y);
 
                 if(this.getTile(x,y) == TILE_EMPTY)
                   valid = true;
-                  
 
-                //if (this.getAbsTile(x,y) != TILE_SOLID) {
-                    //valid = true;
-
-                    //// clear room
-                    //for(var i=-2; i<=2; i++)
-                        //for(var j=-2; j<=2; j++)
-                            //if (this.getAbsTile(x+i, y+j) == TILE_BRICK) this.setAbsMap(x+i, y+j, TILE_EMPTY);
-                //}
             } while(!valid);
 
-            //this.trigger('notify');
 
             return {
                 x: x + .5,
                 y: y + .5
             };
         },
-
-        //update: function(g, now) {
-            //if (_.size(g.playersById)==0)
-                //return;
-
-            //var tot = 0;
-            //var cnt = 0;
-            //var m = this.attributes;
-
-            //for(var i=m.x; i<=m.x+m.width; i++)
-                //for(var j=m.y; j<=m.y+m.height; j++) {
-                    //tot++;
-                    //var t = this.getAbsTile(i, j);
-                    //if (t != TILE_SOLID) tot++;
-                    //if (t == TILE_BRICK) cnt++;
-                //}
-
-            //var fill = cnt / tot;
-            //console.log("Map fill = " + fill);
-            //global.counters.mapfill = fill;
-            //if (cnt > tot*0.09) return;
-
-            //var fills = 20;
-
-            //for(i=0; i<fills; i++) {
-                //var x = Math.floor(Math.random()*this.get('width')) + this.get('x');
-                //var y = Math.floor(Math.random()*this.get('height')) + this.get('y');
-
-                //if (_.any(g.playersById, function(p){
-                    //d = Math.abs(x - p.get('x')) + Math.abs(y - p.get('y'));
-                    //if (d < 5) return true;
-                //}))
-                    //continue;
-
-
-                //if (this.getAbsTile(x,y) == TILE_EMPTY) {
-                    //this.setAbsMap(x, y, TILE_BRICK);
-                //}
-            //}
-
-            //this.trigger('notify');
-        //}
-
     });
 
 })();

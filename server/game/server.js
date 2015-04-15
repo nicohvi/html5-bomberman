@@ -8,7 +8,6 @@ Backbone = require('backbone');
 var util = require('util');
 var assign = require('object-assign');
 
-var redis;
 
 require('./game.js');
 
@@ -17,21 +16,20 @@ var Server = Backbone.Model.extend({
     initialize: function(opt) {
         var io = opt.io;
         this.socketId = 1;
-        redis = opt.redis;
         this.views = [];
-
-        if (redis) {
-            redis.incr("counters.restarts");
-            redis.set("stats.last-start-time", (new Date()).getTime());
-        }
 
         io.set('log level', 1);
         
-        this.game = new Game({ redis: redis });
+        this.game = new Game();
+
+        // TODO: Conflate endpoints
         this.game.on('player-spawn', this.playerSpawned.bind(this));
         this.game.on('player-update', this.playerUpdate.bind(this));
         this.game.on('player-die', this.playerDie.bind(this));
+        this.game.on('player-score', this.playerScore.bind(this));
         this.game.on('bomb-explode', this.bombExplode.bind(this));
+        this.game.on('flame-spawn', this.flameSpawn.bind(this));
+        this.game.on('flame-die', this.flameDie.bind(this));
 
         this.view = io.of('/view');
         this.view.on('connection', this.onViewConnection.bind(this));
@@ -88,7 +86,8 @@ var Server = Backbone.Model.extend({
 
       socket.on('place-bomb', function () {
         var bomb = this.game.placeBomb(socketId);
-        this.bombPlaced(bomb);
+        if(bomb)
+          this.bombPlaced(bomb);
       }.bind(this));
 
       socket.on('disconnect', function () {
@@ -124,9 +123,14 @@ var Server = Backbone.Model.extend({
       this._viewUpdate('player-update', { player: player });
     },
 
-    playerDie: function (player) {
+    playerDie: function (player, suicide) {
       if(player == null) return;
-      this._viewUpdate('player-die', { player: player });
+      this._viewUpdate('player-die', { player: player, suicide: suicide });
+    },
+
+    playerScore: function (player) {
+      if(player == null) return;
+      this._viewUpdate('player-score', { player: player });
     },
 
     bombPlaced: function (bomb) {
@@ -138,164 +142,18 @@ var Server = Backbone.Model.extend({
       this._viewUpdate('bomb-explode',{ state: data });
     },
 
+    flameSpawn: function (flames) {
+      this._viewUpdate('flame-spawn', { flames: flames });
+    },
+
+    flameDie: function (flames) {
+      this._viewUpdate('flame-die', { flames: flames });
+    },
+
     _generateSocketId: function () {
       return this.socketId++;
     }
 
 });
 
-       //console.log('lobby connection');
-      //socket.emit('connect');
-      //socket.on('join-game', function (data) {
-        //console.log(util.inspect(data));
-        //console.log('joining game');
-        //this.game.addPlayer(data);        
-        
-        //socket.emit('game-info', {
-          //game: this.game,
-          //player: _.last(this.game.players)
-        //});
-
-      //}.bind(this));
-      
-      //socket.on('request-move', function (data) {
-        //console.log('move requested');
-        //this.game.playerMove(data);
-      //}.bind(this));
-
-      //socket.on('disconnect', function (data) {
-        //console.log('disconnect');
-        //this.game.removePlayer(data);
-      //}.bind(this));
-    //},
-
-    //lobbyConnection: function(socket) {
-
-        //socket.on('list-games', _.bind(function(d) {
-            //socket.emit("list-games", {
-                //"game1": {
-                    //type: "free",
-                    //count: global.counters.players
-                //}
-            //});
-        //}, this));
-
-    //},
-
-    //connection: function(socket) {
-        //global.counters.players++;
-
-        //// generate id
-        //var playerId = this.game.generatePlayerId();
-
-        //// send game info
-        //socket.emit('game-info', {
-            //game: "demo1",
-            //ver: 1,
-            //your_id: playerId
-        //});
-
-        //// wait for join
-        //socket.on('join', _.bind(function(d) {
-            //var name = d.name;
-
-            //if (redis)
-                //redis.incr("counters.joined-players");
-
-            //// create new player
-            //var me = new Player({
-                //id: playerId,
-                //name: d.name,
-                //character: d.character,
-                //fbuid: d.fbuid
-            //});
-        
-            //this.game.playersById[playerId] = me;
-
-            //// setup a player controller
-            //var ctrl = new PlayerController({
-                //id: playerId,
-                //player: me,
-                //game: this.game, // TODO joined game
-                //socket: socket,
-                //view: this.view,
-                //endpoint: this.endpoint
-            //});
-
-            //this.game.ctrlsById[playerId] = ctrl;
-
-            //ctrl.on('disconnect', _.bind(function() {
-                //console.log('player left yo');
-                //delete this.game.playersById[playerId];
-                //delete this.game.ctrlsById[playerId];
-
-
-                //// FIXME D.R.Y.
-                //_.each(this.game.ctrlsById, function(ctrl, id) {
-                    //if (id == playerId) return;
-                    //ctrl.notifyFriendBattles();
-                //});
-
-                //global.counters.players--;
-            //}, this));
-
-            //console.log("+ " + name + " joined the game " + d.fbuid);
-
-            //// notify everyone about my join
-            //socket.broadcast.emit('player-joined', me.getInitialInfo());           
-            //this.view.emit('player-joined', me.getInitialInfo());
-
-            //// update me about the current game state
-            //ctrl.notifyGameState();
-
-            //_.each(this.game.ctrlsById, function(ctrl, id) {
-                //if (id == playerId) return;
-                //ctrl.notifyFriendBattles();
-            //});
-        //}, this));
-
-    //},
-
-    //onBombRemoved: function(b) {
-////            console.log('exploding bomb at ' + b.get('x') + "," + b.get('y'));
-
-        //this.endpoint.emit('bomb-boomed', {
-            //x: b.get('x'),
-            //y: b.get('y'),
-            //strength: b.get('strength')
-        //});
-    //},
-
-    //notifyScoreUpdates: function() {
-        //var scoring = {};
-        //_.each(this.game.playersById, function(p,id) {
-            //scoring[id] = p.get('score');
-        //});
-
-        //// why not boat?
-        //this.view.emit('score-updates', scoring);
-        //this.endpoint.emit('score-updates', scoring);
-    //}
-
-
-        //this.playerSocket.on('connection', this.onPlayerConnection.bind(this));
-
-        //this.game.bombs.on('remove', this.onBombRemoved, this);
-
-        //this.game.on('score-changes', _.debounce(this.notifyScoreUpdates, 50), this);
-
-        //this.lobbySocket = io.of('/lobby');
-        //this.lobbySocket.on('connection', this.onLobbyConnection.bind(this));
-
-        //this.endpoint = io.of('/game');
-        //this.endpoint.on('connection', _.bind(this.connection, this));
-
-        //this.view = io.of('/view');
-        //this.view.on('connection', this.viewConnection.bind(this));
-
-        //this.game.endpoint = this.endpoint;
-
-        //this.lobby = io.of('/lobby');
-        //this.lobby.on('connection', _.bind(this.lobbyConnection, this));
- 
 module.exports = Server;

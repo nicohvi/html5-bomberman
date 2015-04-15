@@ -5,25 +5,37 @@ var BOMB_TIMER = 5000;
 var BOMB_STRENGTH = 4;
 var COOLDOWN_TIME = 1000;
 var SPAWNING_TIME = 6000;
+var FUSE_TIME = 500;
 
 var Bomb = require('./bomb');
+var Flame = require('./flame');
+
 // fix
 require('./player');
 require('./map');
+
 var PLAYER_GIRTH = 0.35;
-var bombId = 0;
+var bombId = 0,
+    flameId = 0;
+
+function getTicks() {
+  return new Date().getTime();
+}
 
 (function() {
 
     Game = Backbone.Model.extend({
 
-        initialize: function(opt) {
+        initialize: function() {
             this.players = {};
             this.bombs = {};
-            this.redis = opt.redis;
+            this.flames = {};
             this.map = new Map();
+            this.lastTick = getTicks();
+            setInterval(this.update.bind(this), 100);
         },
-      
+
+        // TODO: add flames and bombs 
         getState: function () {
           return { players: this.players, map: this.map.getMap() };
         },
@@ -66,6 +78,9 @@ var bombId = 0;
             console.log('player not found')
             return;
           }
+          
+          if(!player.get('alive'))
+            return;
 
           // TODO: use delta and input throttling
           var delta = player.getMove(data.dir);
@@ -96,12 +111,13 @@ var bombId = 0;
               floorY = Math.floor(y),
               newX = Math.floor(x + dx + this._direction(dx)*PLAYER_GIRTH),
               newY = Math.floor(y + dy + this._direction(dy)*PLAYER_GIRTH);
+
           // x-axis
-          if(!this.map.canMove(newX, floorY))
+          if(!this.map.canMove(newX, floorY))// && this.canMove(newX, floorY))
             dx = 0;
 
           // y-axis
-          if(!this.map.canMove(floorX, newY))
+          if(!this.map.canMove(floorX, newY)) //&& this.canMove(floorX, newY))
             dy = 0;
           
           if(dx != 0 || dy != 0) {
@@ -125,10 +141,33 @@ var bombId = 0;
           console.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
 
           this.bombs[bomb.id] = bomb;
+          setTimeout(function () {this.map.placeBomb(bomb)}.bind(this), FUSE_TIME);
           setTimeout(function () {this.bombExplode(bomb)}.bind(this),
   BOMB_TIMER);
           setTimeout(function () {this.clearCooldown(player)}.bind(this), COOLDOWN_TIME);
           return bomb;
+        },
+
+        update: function () {
+          var now = getTicks();
+          // TODO: test for input, move accordingly.
+          _.forEach(this.players, function (player) {
+            var flame = player.collision(this.flames);
+            if(flame) {
+              var killer = this.players[this.bombs[flame.bombId].playerId];
+              var suicide = killer.get('id') == player.get('id'); 
+              console.log(player.get('name')+ ' died, by suicide? ' +suicide);
+              player.die();
+              this.trigger('player-die', player, suicide);
+              suicide ? this.scoreUpdate(player, -1) : this.scoreUpdate(killer, 1);
+              setTimeout(this.spawnPlayer.bind(this, player), SPAWNING_TIME);
+            }
+          }.bind(this));
+        },
+
+        scoreUpdate: function (player, score) {
+          player.updateScore(score);
+          this.trigger('player-score', player);
         },
 
         bombExplode: function (bomb) {
@@ -137,6 +176,7 @@ var bombId = 0;
                   y = Math.floor(bomb.y);
 
           console.log('bomb exploding at: ' +bomb.x+ ", " +bomb.y);
+          this.map.removeBomb(bomb);
           
           tiles = this.getBombTiles(x, y);
 
@@ -144,34 +184,47 @@ var bombId = 0;
             return typeof(tile) != "undefined";
           });
 
+          this.spawnFlames(tiles, bomb.id);
+
           dirtyTiles = _.filter(tiles, function (tile) {
             return tile.value == TILE_BRICK; 
           });
 
           this.map.updateMap(dirtyTiles);
-          
+ 
           this.trigger(
             'bomb-explode', 
-            { bomb: bomb, tiles: tiles, dirtyTiles: dirtyTiles }
+            { bomb: bomb, dirtyTiles: dirtyTiles }
           );
           
-          _.each(this.players, function (player) {
-            var alive = player.watchOut(tiles);
-            if(!alive) {
-              setTimeout(function () { this.spawnPlayer(player); }.bind(this), SPAWNING_TIME);
-              this.trigger('player-die', player); 
-            }
-          }.bind(this));
         },
 
         getBombTiles: function (x,y) {
           var result = [];
+          // TODO: takeWhile
           result = result.concat(this.map.getXBombTiles(x, x-BOMB_STRENGTH, y));
           result = result.concat(this.map.getXBombTiles(x, x +BOMB_STRENGTH, y));
           result = result.concat(this.map.getYBombTiles(y, y-BOMB_STRENGTH, x));
           result = result.concat(this.map.getYBombTiles(y, y+BOMB_STRENGTH, x));
-          console.log(util.inspect(result));
           return result;
+        },
+
+        spawnFlames: function (tiles, bombId) {
+          var newFlames = [];
+          _.forEach(tiles, function (tile) {
+            var flame = new Flame(tile.x, tile.y, flameId++, bombId); 
+            this.flames[flame.id] = flame;
+            newFlames.push(flame);
+          }.bind(this));
+          this.trigger('flame-spawn', newFlames);
+          setTimeout(this.killFlames.bind(this, newFlames), 1000);
+        },
+
+        killFlames: function (flames) {
+          _.forEach(flames, function (flame) {
+            delete this.flames[flame.id];
+          }.bind(this));
+          this.trigger('flame-die', flames);
         },
 
         clearCooldown: function (player) {
@@ -182,103 +235,3 @@ var bombId = 0;
 
 
 })();
-
-
-        //_chainBombs: function(b) {
-            //this.bombs.remove(b);
-            //this.chained.push(b);
-
-            //// build chained bombs
-            //this.each4Ways(b.get('x'), b.get('y'), b.get('strength'),
-                //_.bind(function(x,y) {
-                    //var cb;
-                    //if (cb = this.getBomb(x, y)) {
-                        //this._chainBombs(cb);
-                    //}
-                //}, this),
-                //_.bind(function(x, y, t) {
-                    //if (t == TILE_BRICK)
-                        //this.blocks.push( {x: x, y: y} );
-                //}, this)
-            //);
-        //},
-
-        //explodeBomb: function(b) {
-            //this.chained = [];
-            //this.blocks = [];
-
-            //this._chainBombs(b);
-
-            //_.each(this.blocks, function(b) {
-                //this.map.setAbsMap(b.x, b.y, TILE_EMPTY, false);
-            //}, this);
-
-            //this.endpoint.emit('break-tiles', this.blocks);
-        //},
-
-        /**
-         * Iterates valid flame points
-         * @param x
-         * @param y
-         * @param len
-         * @param f1 = function(x, y) - free space
-         * @param f2 = function(x, y, type) - collision
-         */
-        //each4Ways: function(x, y, len, f1, f2) {
-            //_.each(DIRECTIONS, _.bind(function(dir) {
-                //for(var i=0; i<=len; i++) {
-                    //if (i==0 && dir.zero === undefined) continue; // allow only one zero
-                    //var xx = x + dir.x*i;
-                    //var yy = y + dir.y*i;
-                    //var tt = this.map.getAbsTile( xx, yy );
-                    //if (tt != TILE_EMPTY) {
-                        //if (f2!==undefined) f2(xx, yy, tt);
-                        //return;
-                    //}
-                    //f1(xx,yy);
-                //}
-            //}, this));
-        //},
-
-        //getBomb: function(x,y) {
-            //return this.bombs.find(function(b) { return b.get('x') == x && b.get('y') == y; });
-        //},
-
-        //scoreKill: function(whoId, byWhoId) {
-            //var who = this.playersById[whoId];
-            //if (!who) return;
-
-            //if (this.redis)
-                //this.redis.incr("counters.kills");
-
-            //if (whoId == byWhoId) { // suicide
-                //console.log(who.get('name') + " suicided");
-                //who.set('score', who.get('score') - 1);
-
-                //if (this.redis) {
-                    //this.redis.incr("counters.kills.suicides");
-                    //this.redis.incr("suicides-by:" + whoId);
-                //}
-
-            //} else {
-                //var byWho = this.playersById[byWhoId];
-                //if (!byWho) return;
-
-                //console.log(who.get('name') + " was killed by " + byWho.get('name'));
-                //byWho.set('score', byWho.get('score') + 1);
-
-                //if (this.redis) {
-                    //this.redis.incr("counters.kills.kills");
-                    //this.redis.incr("kills-by:" + byWhoId);
-
-                    //if (who.get('fbuid')>0 && byWho.get('fbuid') > 0)
-                        //this.redis.incr("kill:" + who.get('fbuid') + ":by:" + byWho.get('fbuid'));
-                //}
-
-                //this.ctrlsById[whoId].notifyFriendBattles();
-                //this.ctrlsById[byWhoId].notifyFriendBattles();
-            //}
-            //this.trigger('score-changes');
-        //}
-
-

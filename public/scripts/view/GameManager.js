@@ -6,7 +6,6 @@ var GameManager = {
   init: function () {
     this.socket = io.connect('/view'); 
     this.setupListeners.call(this);
-    //setInterval(function () { this.socket.emit('ping') }.bind(this), 1000);
   },
 
   setupListeners: function() {
@@ -16,8 +15,11 @@ var GameManager = {
     this.socket.on('player-spawn', this.onPlayerSpawn.bind(this));
     this.socket.on('player-update', this.onPlayerUpdate.bind(this));
     this.socket.on('player-die', this.onPlayerDie.bind(this));
+    this.socket.on('player-score', this.onPlayerScore.bind(this));
     this.socket.on('bomb-place', this.onBombPlace.bind(this));
     this.socket.on('bomb-explode', this.onBombExplode.bind(this));
+    this.socket.on('flame-spawn', this.onFlameSpawn.bind(this));
+    this.socket.on('flame-die', this.onFlameDie.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
 
@@ -42,7 +44,15 @@ var GameManager = {
   },
 
   onPlayerDie: function (data) {
-    Game.playerDie(data.player);
+    Game.playerDie(data.player, data.suicide);
+  },
+
+  onPlayerScore: function (data) {
+    Game.playerScore(data.player);
+  },
+
+  onSuicide: function (data) {
+    Game.suicide(data.player);
   },
 
   onBombPlace: function (data) {
@@ -51,6 +61,14 @@ var GameManager = {
 
   onBombExplode: function (data) {
     Game.bombExplode(data.state);
+  },
+
+  onFlameSpawn: function (data) {
+    Game.flameSpawn(data.flames);
+  },
+
+  onFlameDie: function (data) {
+    Game.flameDie(data.flames);
   },
 
   onPong: function () {
