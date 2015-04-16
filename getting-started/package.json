@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "babelify": "^6.0.2",
+    "dualshock-controller": "^0.6.7",
     "express": "^3.3.8",
     "socket.io": "^0.9.17",
     "socket.io-client": "^0.9.17",
