@@ -8,7 +8,7 @@ var ORIENT_UP = 1;
 var ORIENT_RIGHT = 2;
 var ORIENT_LEFT = 3;
 var util = require('util');
-var moveAmount = 0.125;
+var moveAmount = 0.25;
 
 (function() { 
 
@@ -19,6 +19,8 @@ var moveAmount = 0.125;
           score: 0,
           orient: ORIENT_DOWN,
           cooldown: false,
+          moving: false,
+          move: null
         },
 
         initialize: function(data) {
@@ -32,14 +34,20 @@ var moveAmount = 0.125;
         },
 
         stop: function () {
-          this.set('moving', false)
+          this.set('moving', false);
+          this.set('move', null);
         },
 
-        getMove: function (direction) {
+        requestMove: function (dir) {
+          this.set('moving', true);
+          this.set('move', dir);
+        },
+
+        getMove: function () {
           var dx = 0,
               dy = 0;
 
-          switch(direction) {
+          switch(this.get('move')) {
             case 'left':
               dx -= moveAmount;
               break;

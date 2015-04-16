@@ -51,6 +51,7 @@ var Game = {
       console.log('Unkown update: ' +player.id);
       return;
     }  
+    console.log(player.x + ' ' +player.y);
     plr.update(player); 
   },
 

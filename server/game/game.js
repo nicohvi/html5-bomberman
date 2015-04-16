@@ -32,7 +32,7 @@ function getTicks() {
             this.flames = {};
             this.map = new Map();
             this.lastTick = getTicks();
-            setInterval(this.update.bind(this), 100);
+            setInterval(this.update.bind(this), 50);
         },
 
         // TODO: add flames and bombs 
@@ -81,14 +81,8 @@ function getTicks() {
           
           if(!player.get('alive'))
             return;
-
-          // TODO: use delta and input throttling
-          var delta = player.getMove(data.dir);
-
-          if(this.requestMove(player, delta))
-            return player;
-          else
-            return null;
+          
+          player.requestMove(data.dir);
         },
 
         _generatePlayerId: function () {
@@ -142,6 +136,9 @@ function getTicks() {
             console.log('player is cooling down');
             return null;
           }
+
+          if(!player.get('alive'))
+            return null;
             
           var bomb = new Bomb(bombId++, player, this.lastTick);
         
@@ -157,6 +154,16 @@ function getTicks() {
           var now = getTicks();
           // TODO: test for input, move accordingly.
           _.forEach(this.players, function (player) {
+            if(!player.get('alive'))
+              return;
+
+            if(player.get('moving') && player.get('move')) {
+              var delta = player.getMove();
+              // move player
+              if(this.requestMove(player, delta))
+                this.trigger('player-update', player);
+            };
+
             var flame = player.collision(this.flames);
             if(flame) {
               var killer = this.players[flame.playerId];

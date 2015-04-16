@@ -71,12 +71,13 @@ var Server = Backbone.Model.extend({
         this.game.spawnPlayer(player);
       }.bind(this));
       
-      var moveHandler = _.debounce(function (data) {
-        var player = this.game.playerMove(socketId, data);
-        this.playerUpdate(player);
-      }.bind(this), 10)
+      //var moveHandler = _.debounce(function (data) {
+        //this.game.playerMove(socketId, data);
+        ////this.playerUpdate(player);
+      //}.bind(this), 10)
       socket.on('request-move', function (data) {
-        moveHandler.call(this, data); 
+        this.game.playerMove(socketId, data);
+        //moveHandler.call(this, data); 
       }.bind(this));
 
       socket.on('stop-move', function () {
