@@ -98,6 +98,13 @@ var Game = {
     }.bind(this));
   },
 
+  gameDone: function (player) {
+    console.log('game over');
+    this._playSound('win');
+    this.players[player.id].winner = true;
+    Leaderboard.load(this.players);
+  },
+
   update: function () {
     var now   = getTicks(),
         delta = (now - this.lastTick) / 1000;

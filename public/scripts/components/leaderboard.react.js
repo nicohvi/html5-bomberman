@@ -9,7 +9,7 @@ var Leaderboard = React.createClass({
     var players = _.sortBy(this.props.players, function (player) {
       return player.score;
     }).reverse().map(function (player) {
-      return <Player name={player.name} score={player.score} key={key++} />;
+      return <Player name={player.name} score={player.score} winner={player.winner} key={key++} />;
     });
 
     return <ul className="leaderboard">{players}</ul>;

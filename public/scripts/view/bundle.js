@@ -44611,7 +44611,7 @@ var Leaderboard = React.createClass({
     var players = _.sortBy(this.props.players, function (player) {
       return player.score;
     }).reverse().map(function (player) {
-      return React.createElement(Player, { name: player.name, score: player.score, key: key++ });
+      return React.createElement(Player, { name: player.name, score: player.score, winner: player.winner, key: key++ });
     });
 
     return React.createElement(
@@ -44635,9 +44635,10 @@ var Player = React.createClass({
   displayName: 'Player',
 
   render: function render() {
+    var cx = this.props.winner ? 'winner' : '';
     return React.createElement(
       'li',
-      null,
+      { className: cx },
       this.props.name,
       ': ',
       this.props.score
@@ -45003,6 +45004,7 @@ var Game = {
       console.log('Unkown update: ' + player.id);
       return;
     }
+    console.log(player.x + ' ' + player.y);
     plr.update(player);
   },
 
@@ -45046,6 +45048,13 @@ var Game = {
     _.forEach(flames, (function (flame) {
       delete this.flames[flame.id];
     }).bind(this));
+  },
+
+  gameDone: function gameDone(player) {
+    console.log('game over');
+    this._playSound('win');
+    this.players[player.id].winner = true;
+    Leaderboard.load(this.players);
   },
 
   update: function update() {
@@ -45123,6 +45132,7 @@ var GameManager = {
     this.socket.on('bomb-explode', this.onBombExplode.bind(this));
     this.socket.on('flame-spawn', this.onFlameSpawn.bind(this));
     this.socket.on('flame-die', this.onFlameDie.bind(this));
+    this.socket.on('game-done', this.onGameDone.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
 
@@ -45172,6 +45182,10 @@ var GameManager = {
 
   onFlameDie: function onFlameDie(data) {
     Game.flameDie(data.flames);
+  },
+
+  onGameDone: function onGameDone(data) {
+    Game.gameDone(data.player);
   },
 
   onPong: function onPong() {
@@ -45247,6 +45261,7 @@ var Player = (function () {
     this.frame = 0;
     this.alive = true;
     this.character = 'betty';
+    this.winner = false;
   }
 
   _createClass(Player, [{

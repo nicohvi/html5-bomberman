@@ -1,11 +1,14 @@
-var assign = require('object-assign');
 var _ = require('lodash');
 var util = require('util');
-var BOMB_TIMER = 3000;
-var BOMB_STRENGTH = 4;
-var COOLDOWN_TIME = 1000;
-var SPAWNING_TIME = 6000;
-var FUSE_TIME = 500;
+
+// Constants
+var BOMB_TIMER = 3000,
+  BOMB_STRENGTH = 4,
+  COOLDOWN_TIME = 1000,
+  SPAWNING_TIME = 6000,
+  FUSE_TIME = 500,
+  PLAYER_GIRTH = 0.35,
+  WINNING_SCORE = 5;
 
 var Bomb = require('./bomb');
 var Flame = require('./flame');
@@ -14,7 +17,6 @@ var Flame = require('./flame');
 require('./player');
 require('./map');
 
-var PLAYER_GIRTH = 0.35;
 var bombId = 0,
     flameId = 0;
 
@@ -31,8 +33,10 @@ function getTicks() {
             this.bombs = {};
             this.flames = {};
             this.map = new Map();
+            this.done = false;            
+
             this.lastTick = getTicks();
-            setInterval(this.update.bind(this), 50);
+            setInterval(this.update.bind(this), 17);
         },
 
         // TODO: add flames and bombs 
@@ -137,7 +141,7 @@ function getTicks() {
             return null;
           }
 
-          if(!player.get('alive'))
+          if(!player.get('alive') || this.done)
             return null;
             
           var bomb = new Bomb(bombId++, player, this.lastTick);
@@ -152,6 +156,10 @@ function getTicks() {
 
         update: function () {
           var now = getTicks();
+
+          if(this.done)
+            return;
+
           // TODO: test for input, move accordingly.
           _.forEach(this.players, function (player) {
             if(!player.get('alive'))
@@ -163,6 +171,9 @@ function getTicks() {
               if(this.requestMove(player, delta))
                 this.trigger('player-update', player);
             };
+
+            if(player.get('score') >= WINNING_SCORE) 
+              this.endGame(player)
 
             var flame = player.collision(this.flames);
             if(flame) {
@@ -186,6 +197,12 @@ function getTicks() {
           }.bind(this));
         
           this.lastTick = now;
+        },
+
+        endGame: function (winner) {
+          this.done = true;
+          this.winner = winner;
+          this.trigger('game-done', winner);
         },
 
         scoreUpdate: function (player, score) {

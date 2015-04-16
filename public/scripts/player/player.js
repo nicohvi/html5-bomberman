@@ -40,17 +40,14 @@ class Player {
       // down
       case 40: 
         this.doMove('down');
-        //this.doMove({ x: 0, y: 1 });
         break;
       // right
       case 39:
         this.doMove('right');
-        //this.doMove({ x: 1, y: 0 });
         break;
       // up
       case 38:
         this.doMove('up');
-        //this.doMove({ x: 0, y: -1 });
         break;
       // left
       case 37:

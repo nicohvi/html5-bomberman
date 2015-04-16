@@ -20,6 +20,7 @@ var GameManager = {
     this.socket.on('bomb-explode', this.onBombExplode.bind(this));
     this.socket.on('flame-spawn', this.onFlameSpawn.bind(this));
     this.socket.on('flame-die', this.onFlameDie.bind(this));
+    this.socket.on('game-done', this.onGameDone.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
 
@@ -69,6 +70,10 @@ var GameManager = {
 
   onFlameDie: function (data) {
     Game.flameDie(data.flames);
+  },
+
+  onGameDone: function (data) {
+    Game.gameDone(data.player);
   },
 
   onPong: function () {

@@ -3,7 +3,8 @@ var React = require('react');
 var Player = React.createClass({
 
   render: function () {
-    return <li>{this.props.name}: {this.props.score}</li>;
+    var cx = this.props.winner ? 'winner' : '';
+    return <li className={cx}>{this.props.name}: {this.props.score}</li>;
   }
 
 });

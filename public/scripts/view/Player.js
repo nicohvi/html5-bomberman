@@ -11,6 +11,7 @@ class Player {
     this.frame = 0;
     this.alive = true;
     this.character = 'betty';
+    this.winner = false;
   }
 
   update (options) {

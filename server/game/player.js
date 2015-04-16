@@ -8,7 +8,7 @@ var ORIENT_UP = 1;
 var ORIENT_RIGHT = 2;
 var ORIENT_LEFT = 3;
 var util = require('util');
-var moveAmount = 0.25;
+var moveAmount = 0.15;
 
 (function() { 
 

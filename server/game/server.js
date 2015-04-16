@@ -30,6 +30,7 @@ var Server = Backbone.Model.extend({
         this.game.on('bomb-explode', this.bombExplode.bind(this));
         this.game.on('flame-spawn', this.flameSpawn.bind(this));
         this.game.on('flame-die', this.flameDie.bind(this));
+        this.game.on('game-done', this.gameDone.bind(this));
 
         this.view = io.of('/view');
         this.view.on('connection', this.onViewConnection.bind(this));
@@ -71,13 +72,8 @@ var Server = Backbone.Model.extend({
         this.game.spawnPlayer(player);
       }.bind(this));
       
-      //var moveHandler = _.debounce(function (data) {
-        //this.game.playerMove(socketId, data);
-        ////this.playerUpdate(player);
-      //}.bind(this), 10)
       socket.on('request-move', function (data) {
         this.game.playerMove(socketId, data);
-        //moveHandler.call(this, data); 
       }.bind(this));
 
       socket.on('stop-move', function () {
@@ -149,6 +145,11 @@ var Server = Backbone.Model.extend({
 
     flameDie: function (flames) {
       this._viewUpdate('flame-die', { flames: flames });
+    },
+
+    gameDone: function (player) {
+      console.log('game done');
+      this._viewUpdate('game-done', { player: player });
     },
 
     _generateSocketId: function () {
