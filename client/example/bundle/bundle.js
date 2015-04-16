@@ -81,6 +81,11 @@ var Controller = (function () {
       this.socket.emit('request-move', { dir: dir });
     }
   }, {
+    key: 'stop',
+    value: function stop() {
+      this.socket.emit('stop-move');
+    }
+  }, {
     key: 'placeBomb',
     value: function placeBomb() {
       this.socket.emit('place-bomb');

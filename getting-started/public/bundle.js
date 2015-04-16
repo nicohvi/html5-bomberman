@@ -41,6 +41,11 @@ var Controller = (function () {
       this.socket.emit('request-move', { dir: dir });
     }
   }, {
+    key: 'stop',
+    value: function stop() {
+      this.socket.emit('stop-move');
+    }
+  }, {
     key: 'placeBomb',
     value: function placeBomb() {
       this.socket.emit('place-bomb');
@@ -3969,8 +3974,70 @@ if (typeof define === "function" && define.amd) {
 },{}],3:[function(require,module,exports){
 'use strict';
 
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+
+var io = require('socket.io-client');
+
+var Controller = function Controller(socket) {
+  _classCallCheck(this, Controller);
+
+  this.socket = socket;
+};
+
+var PlaystationController = (function () {
+  function PlaystationController() {
+    _classCallCheck(this, PlaystationController);
+
+    this.callbacks = {};
+  }
+
+  _createClass(PlaystationController, [{
+    key: 'connect',
+    value: function connect(onConnect) {
+      this.callbacks.onConnect = onConnect;
+
+      this.socket = io.connect('http://localhost:5000/ps');
+      this.setupListeners.call(this);
+    }
+  }, {
+    key: 'setupListeners',
+    value: function setupListeners() {
+      this.socket.on('connect', this.onConnect.bind(this));
+    }
+  }, {
+    key: 'onConnect',
+    value: function onConnect() {
+      this.callbacks.onConnect(this.socket);
+      console.log('connected to PS-server');
+    }
+  }]);
+
+  return PlaystationController;
+})();
+
+module.exports = PlaystationController;
+
+},{"socket.io-client":2}],4:[function(require,module,exports){
+'use strict';
+
 var Client = require('../../client');
+var PlaystationController = require('../../client/playstation');
 // Write code here
 console.log('nothing is implmented');
 
-},{"../../client":1}]},{},[3]);
+var psController = new PlaystationController();
+
+psController.connect(function (socket) {
+
+  socket.on('left', function (data) {
+    console.log('left');
+  });
+
+  socket.on('right', function (data) {
+    console.log('right');
+  });
+});
+
+},{"../../client":1,"../../client/playstation":3}]},{},[4]);

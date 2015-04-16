@@ -15,8 +15,6 @@ app.use(express.bodyParser());
 app.use('/controller', express.static(__dirname + "/public/"));
 app.use(express.static(__dirname + '/../public/'))
 
-
-
 server.listen(8080);
 
 module.exports = app;

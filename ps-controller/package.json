@@ -1,0 +1,12 @@
+{
+  "name": "ps4",
+  "version": "0.0.1",
+  "engines": {
+    "node": "0.6.x"
+  },
+  "dependencies": {
+    "express": "~3.3.8",
+	  "socket.io": "0.9.12",
+    "dualshock-controller": "^0.6.7"
+  }
+}
