@@ -26,6 +26,10 @@ class Controller {
     this.socket.emit('request-move', { dir: dir });
   }
 
+  stop () {
+    this.socket.emit('stop-move');
+  }
+
   placeBomb () {
     this.socket.emit('place-bomb');
   }
