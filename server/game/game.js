@@ -1,7 +1,7 @@
 var assign = require('object-assign');
 var _ = require('lodash');
 var util = require('util');
-var BOMB_TIMER = 5000;
+var BOMB_TIMER = 3000;
 var BOMB_STRENGTH = 4;
 var COOLDOWN_TIME = 1000;
 var SPAWNING_TIME = 6000;
@@ -111,15 +111,22 @@ function getTicks() {
               floorY = Math.floor(y),
               newX = Math.floor(x + dx + this._direction(dx)*PLAYER_GIRTH),
               newY = Math.floor(y + dy + this._direction(dy)*PLAYER_GIRTH);
-
           // x-axis
-          if(!this.map.canMove(newX, floorY))// && this.canMove(newX, floorY))
+          if(!this.map.canMove(newX, floorY))
+            dx = 0;
+          
+          var bombTest = this.hasBomb({x: newX, y: floorY});
+          if(bombTest && bombTest.active)
             dx = 0;
 
           // y-axis
-          if(!this.map.canMove(floorX, newY)) //&& this.canMove(floorX, newY))
+          if(!this.map.canMove(floorX, newY))
             dy = 0;
-          
+
+          bombTest = this.hasBomb({ x: floorX, y: newY})
+          if(bombTest && bombTest.active)
+            dy = 0;
+            
           if(dx != 0 || dy != 0) {
             player.deltaMove(dx, dy);
             return true;
@@ -129,21 +136,19 @@ function getTicks() {
         },
 
         placeBomb: function (socketId) {
-          var player  = this.players[socketId],
-              bomb    = new Bomb(bombId++, player);
+          var player  = this.players[socketId];
 
           if(player.get('cooldown')) {
             console.log('player is cooling down');
             return null;
           }
+            
+          var bomb = new Bomb(bombId++, player, this.lastTick);
         
           player.set('cooldown', true); 
           console.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
 
           this.bombs[bomb.id] = bomb;
-          setTimeout(function () {this.map.placeBomb(bomb)}.bind(this), FUSE_TIME);
-          setTimeout(function () {this.bombExplode(bomb)}.bind(this),
-  BOMB_TIMER);
           setTimeout(function () {this.clearCooldown(player)}.bind(this), COOLDOWN_TIME);
           return bomb;
         },
@@ -154,7 +159,7 @@ function getTicks() {
           _.forEach(this.players, function (player) {
             var flame = player.collision(this.flames);
             if(flame) {
-              var killer = this.players[this.bombs[flame.bombId].playerId];
+              var killer = this.players[flame.playerId];
               var suicide = killer.get('id') == player.get('id'); 
               console.log(player.get('name')+ ' died, by suicide? ' +suicide);
               player.die();
@@ -163,6 +168,17 @@ function getTicks() {
               setTimeout(this.spawnPlayer.bind(this, player), SPAWNING_TIME);
             }
           }.bind(this));
+
+          _.forEach(this.bombs, function (bomb) {
+            if(now - bomb.placedAt > BOMB_TIMER) 
+              this.bombExplode(bomb);
+            if(bomb.exploded)
+              delete this.bombs[bomb.id]
+            if(now - bomb.placedAt > FUSE_TIME)
+              bomb.active = true;
+          }.bind(this));
+        
+          this.lastTick = now;
         },
 
         scoreUpdate: function (player, score) {
@@ -171,11 +187,17 @@ function getTicks() {
         },
 
         bombExplode: function (bomb) {
+          // Bomb has already been exploded through the magic
+          // of chaining.
+          if(typeof(bomb) == 'undefined' || bomb.exploded)
+            return;
+
           var tiles = [],
                   x = Math.floor(bomb.x),
                   y = Math.floor(bomb.y);
 
-          console.log('bomb exploding at: ' +bomb.x+ ", " +bomb.y);
+          console.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
+          bomb.exploded = true;
           this.map.removeBomb(bomb);
           
           tiles = this.getBombTiles(x, y);
@@ -184,7 +206,7 @@ function getTicks() {
             return typeof(tile) != "undefined";
           });
 
-          this.spawnFlames(tiles, bomb.id);
+          this.spawnFlames(tiles, bomb.playerId);
 
           dirtyTiles = _.filter(tiles, function (tile) {
             return tile.value == TILE_BRICK; 
@@ -197,6 +219,7 @@ function getTicks() {
             { bomb: bomb, dirtyTiles: dirtyTiles }
           );
           
+          this.chainBombs(tiles, bomb.id);
         },
 
         getBombTiles: function (x,y) {
@@ -209,10 +232,10 @@ function getTicks() {
           return result;
         },
 
-        spawnFlames: function (tiles, bombId) {
+        spawnFlames: function (tiles, playerId) {
           var newFlames = [];
           _.forEach(tiles, function (tile) {
-            var flame = new Flame(tile.x, tile.y, flameId++, bombId); 
+            var flame = new Flame(tile.x, tile.y, flameId++, playerId); 
             this.flames[flame.id] = flame;
             newFlames.push(flame);
           }.bind(this));
@@ -225,6 +248,44 @@ function getTicks() {
             delete this.flames[flame.id];
           }.bind(this));
           this.trigger('flame-die', flames);
+        },
+
+        chainBombs: function (tiles, bombId) {
+          var bombs = [];
+          _.forEach(this.bombs, function (bomb) {
+            console.log('bombId: ' +bomb.id);
+            _.forEach(tiles, function (tile) {
+              if(this.collision(bomb, tile))
+                console.log('collision: ' +bombId+ ' bomb.id: ' +bomb.id);
+              if(this.collision(bomb, tile) && bomb.id != bombId) {
+                console.log('chain');
+                bombs.push(bomb);
+              }
+            }.bind(this));
+          }.bind(this)); 
+
+          _.forEach(bombs, function(bomb) { 
+              console.log('should be chained: ' +util.inspect(bomb));
+              this.bombExplode(bomb);
+          }.bind(this));
+        },
+        
+        hasBomb: function (tile) {
+          var result = null;
+          _.forEach(this.bombs, function (bomb) {
+            console.log(Math.floor(tile.x)+ ', ' +Math.floor(tile.y));
+            console.log(Math.floor(bomb.x)+ ', ' +Math.floor(bomb.y));
+            if(  Math.floor(tile.x) == Math.floor(bomb.x) && 
+                  Math.floor(tile.y) == Math.floor(bomb.y)) {
+              result = bomb;
+            }
+          });
+          return result;
+        },
+
+        collision: function (tile1, tile2) {
+          return  (Math.floor(tile1.x) == Math.floor(tile2.x) && 
+                  Math.floor(tile1.y) == Math.floor(tile2.y));
         },
 
         clearCooldown: function (player) {
