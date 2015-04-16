@@ -1,7 +1,7 @@
 var Socketman = require('../../index');
 var $ = require('jquery');
 
-var client = new Socketman('me.local:8080', 'Ove');
+var client = new Socketman('http://localhost:8080', 'Ove');
 
 client.connect((controller) => {
 
