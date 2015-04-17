@@ -24,6 +24,12 @@ var BombManager = {
     return horizontalTiles.concat(verticalTiles);
   },
 
+  getDirtyTiles: function (tiles) {
+    return _.filter(tiles, function (tile) {
+      return tile.value === TILE_BRICK;
+    });
+  },
+
   _filterTiles: function (tiles, bomb) {
     var paths = _.chunck(tiles, bomb.strength+1);
     _(paths[0]).reverse();

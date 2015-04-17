@@ -31,7 +31,7 @@ function getTicks() {
   return new Date().getTime();
 }
 
-var Game = function () {
+function Game () {
   this.players = {};
   this.bombs = {};
   this.flames = {};
@@ -42,7 +42,7 @@ var Game = function () {
   this.lastTick = getTicks();
   // 60 Hz: 1/60 = 0.167 ~ 17
   setInterval(this.update.bind(this), 17);
-};
+}
 
 // TODO: add flames and bombs 
 Game.prototype.getState = function () {
@@ -238,16 +238,12 @@ Game.prototype.bombExplode = function (bomb) {
   bomb.exploded = true;
   
   tiles = BombManager.getTiles(bomb);
-
+  var dirtyTiles = BombManager.getDirtyTiles(tiles);
   //tiles = _.filter(tiles, function (tile) {
     //return typeof(tile) !== "undefined";
   //});
 
   this.spawnFlames(tiles, bomb.playerId);
-
-  var dirtyTiles = _.filter(tiles, function (tile) {
-    return tile.value === TILE_BRICK; 
-  });
 
   this.map.updateMap(dirtyTiles);
 

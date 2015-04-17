@@ -1,5 +1,6 @@
 /*jslint node: true */
 "use strict";
+
 //var util = require('util');
 var _ = require('lodash');
 
@@ -10,9 +11,7 @@ var viewId    = 0,
     gameId    = 0;
 
 var Server = {
-  init: function (opts) {
-    opts = opts || {};
-    var io = opts.io;
+  init: function (io) {
     this.views = {};
     this.games = {};
 
@@ -27,8 +26,9 @@ var Server = {
 
   addGame: function (opts) {
     opts = opts || {};
+    var game = new Game();
 
-    var game = this.game[gameId++] = new Game();
+    this.game[gameId++] = game;
     this.setupGameListeners(game).call(this);
   },
 
