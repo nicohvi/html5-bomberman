@@ -1,113 +1,103 @@
-var LEFT = 37;
-var UP = 38;
-var RIGHT = 39;
-var DOWN = 40;
-var SPACE = 32;
-var ORIENT_DOWN = 0;
-var ORIENT_UP = 1;
-var ORIENT_RIGHT = 2;
-var ORIENT_LEFT = 3;
-var util = require('util');
-var moveAmount = 0.15;
+/*jslint node: true */
+"use strict";
+// var util = require('util');
 
-(function() { 
+// Constants
+var MOVE_AMOUNT   = 0.15;
 
-    Player = Backbone.Model.extend({
+var Player = function (data) {
+  this.id = data.socketId;
+  this.alive = false;
+  this.score = 0;
+  this.orient = 'down';
+  this.cooldown = false;
+  this.moving = false;
+  this.direction = null; 
+  this.diedAt = null;
+  this.lastBomb = null;
+};
 
-        defaults: {
-          alive: false,
-          score: 0,
-          orient: ORIENT_DOWN,
-          cooldown: false,
-          moving: false,
-          move: null
-        },
+Player.prototype.spawn = function (loc) {
+  this.x = loc.x;
+  this.y = loc.y;
+  this.alive = true;
+};
 
-        initialize: function(data) {
-            this.set('id', data.socketId);
-        },
+Player.prototype.stop = function () {
+  this.moving = false;
+  this.direction = null;
+  return this;
+};
 
-        spawn: function (loc) {
-          this.set('x', loc.x);
-          this.set('y', loc.y);
-          this.set('alive', true);
-        },
+Player.prototype.move = function (dir) {
+  this.moving = true;
+  this.direction = dir;
+  return this;
+};
 
-        stop: function () {
-          this.set('moving', false);
-          this.set('move', null);
-        },
+Player.prototype.getAttemptedMove = function () {
+  var dx = 0,
+      dy = 0;
 
-        requestMove: function (dir) {
-          this.set('moving', true);
-          this.set('move', dir);
-        },
+  switch(this.direction) {
+    case 'left':
+      dx -= MOVE_AMOUNT;
+      break;
+    case 'right':
+      dx += MOVE_AMOUNT;
+      break;
+    case 'up':
+      dy -= MOVE_AMOUNT;
+      break;
+    case 'down':
+      dy += MOVE_AMOUNT;
+      break;
+  }
 
-        getMove: function () {
-          var dx = 0,
-              dy = 0;
+  return { dx: dx, dy: dy };
+};
 
-          switch(this.get('move')) {
-            case 'left':
-              dx -= moveAmount;
-              break;
-            case 'right':
-              dx += moveAmount;
-              break;
-            case 'up':
-              dy -= moveAmount;
-              break;
-            case 'down':
-              dy += moveAmount;
-              break;
-          }
-      
-          return { dx: dx, dy: dy };
-        },    
+Player.prototype.deltaMove = function (dx, dy) {
+  var orient = this.orient;
 
-        deltaMove: function (dx, dy) {
-          this.set('x', this.get('x') + dx);
-          this.set('y', this.get('y') + dy);
+  this.x += dx;
+  this.y += dy;
+  
+  if(dx > 0 && dy > 0) {
+    console.log('both axis');
+  }
 
-          if (dx < 0) 
-            this.set('orient', ORIENT_LEFT);
-          else if (dx > 0)
-            this.set('orient', ORIENT_RIGHT);
-          else if(dy < 0)
-            this.set('orient', ORIENT_UP);
-          else if(dy > 0)
-            this.set('orient', ORIENT_DOWN);
-          this.set('moving', true);
-        },
+  if(dx !== 0) {
+    orient = dx > 0 ? 'left' : 'right';   
+  }
+  else if (dy !== 0) {
+    orient = dy > 0 ? 'down' : 'up'; 
+  }
+  
+  this.moving = true;
+  this.orient = orient;
+  return this;
+};
 
-        collision: function (tiles) {
-          var collision = null;
-          if(!this.get('alive'))
-            return collision;
+Player.prototype.die = function (timeOfDeath) {
+  this.alive = false;
+  this.dieadAt = timeOfDeath;
+};
 
-          var xCoord  = Math.floor(this.get('x')),
-              yCoord  = Math.floor(this.get('y'));
-        
-          _.forEach(tiles, function (tile) {
-            if(collision)
-              return false; 
-            if(tile.x == xCoord && tile.y == yCoord) {
-              console.log(  'player ' +this.get('name')+ ' collides at '
-                            +tile.x+ ', ' +tile.y);
-              collision = tile;
-            }
-          }.bind(this));
-          return collision;
-        },
+Player.prototype.update = function (data) {
+  var opts = data || {};
 
-        die: function() {
-          this.set('alive', false);
-        },
+  this.score = opts.score;  
+  return this;
+};
 
-        updateScore: function (score) {
-          this.set('score', this.get('score') + score);
-        }
+Player.prototype.coolDown = function (time) {
+  this.lastBomb = time;
+  this.cooldown = true;
+};
 
-    });
-})();
+Player.prototype.stopCooldown = function () {
+  this.cooldown = false;
+  this.lastBomb = null;
+};
 

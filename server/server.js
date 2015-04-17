@@ -5,14 +5,6 @@ var app = express();
 var server = require('http').Server(app);
 var socketio = require('socket.io').listen(server);
 
-
-var redis = null;
-//if (!process.env.SHORTFUSE_LIGHT)
-     //redis = require("redis").createClient();
-
-/////////////
-
-
 global.counters = {};
 
 var Server = require("./game/server");
