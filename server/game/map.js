@@ -1,29 +1,26 @@
 /*jslint node: true */
 "use strict";
 
-var _ = require('lodash');
-var Tile = require('./tile');
+let _ = require('lodash');
+//let util = require('util');
+
+let Tile  = require('./tile');
+let lib   = require('./lib/lib');
 
 // Constants
-var TILE_EMPTY = 0,
-    TILE_SOLID = 2,
-    TILE_BRICK = 1,
-    DEFAULT_WIDTH = 50,
-    DEFAULT_HEIGHT = 40;
+const TILE_EMPTY = 0,
+      TILE_SOLID = 2,
+      TILE_BRICK = 1,
+      DEFAULT_WIDTH = 50,
+      DEFAULT_HEIGHT = 40;
 
-var MapGenerator = function (opts) {
-  opts = opts || {};
-  this.width = opts.width;
-  this.height = opts.height;
-  this.map = new Array(this.width * this.height).fill(0);
+let MapGenerator = function (width, height) {
+  this.width = width;
+  this.height = height;
+  this.map = _.fill(new Array(this.width * this.height), 0);
 };
 
 MapGenerator.prototype.generateMap = function () {
-  this.generateTerrain();
-  this.generateWalls();
-};
-
-MapGenerator.prototype.generateTerrain = function () {
   _.times(this.height, function (yCoord) {
     _.times(this.width, function (xCoord) {
       // Wall test
@@ -35,18 +32,20 @@ MapGenerator.prototype.generateTerrain = function () {
         this.setTile(xCoord, yCoord, TILE_SOLID);
       }
       // Randomize the bricks
-      else if (_.floor(_.random(9) === 0)) {
+      else if (lib.floor(_.random(9) === 0)) {
         this.setTile(xCoord, yCoord, TILE_BRICK);
       }
-    });
+    }.bind(this));
   }.bind(this));
+
+  return this.map;
 };
 
 MapGenerator.prototype.setTile = function (xCoord, yCoord, value) {
   this.map[yCoord * this.width + xCoord] = value;
 };
 
-var Map = function (opts) {
+let GameMap = function (opts) {
   opts = opts || {};
 
   this.width = opts.width || DEFAULT_WIDTH;
@@ -56,45 +55,54 @@ var Map = function (opts) {
   this.tiles = this.generator.generateMap();
 };
 
-Map.prototype.getTile = function (xCoord, yCoord) {
-  if(!this._testBounds(xCoord, yCoord)) { return -1; }
-  return this.tiles[yCoord * this.width + xCoord];
+GameMap.prototype.getTile = function (xCoord, yCoord) {
+  if(this.invalidValues(xCoord, yCoord)) { return -1; }
+  let x = lib.floor(xCoord),
+      y = lib.floor(yCoord);
+  return this.tiles[y * this.width + x];
 };
 
-Map.prototype.getRowTiles = function (range, column) {
+GameMap.prototype.getRowTiles = function (range, column) {
   return _.forEach(range, function (xCoord) { 
     return new Tile(xCoord, column, this.getTile(column * this.width + xCoord));
   }.bind(this));
 };
 
-Map.prototype.getColumnTiles = function (range, row) {
+GameMap.prototype.getColumnTiles = function (range, row) {
   return _.forEach(range, function (yCoord) { 
     return new Tile(row, yCoord, this.getTile(yCoord* this.width + row));
   }.bind(this));
 };
 
-Map.prototype.setTile = function (xCoord, yCoord, value) {
-  if(!this._testBounds(xCoord, yCoord)) { return -1; }
+GameMap.prototype.updateMap = function (tiles) {
+  _.forEach(tiles, function (tile) {
+    this.setTile(tile.x, tile.y, TILE_EMPTY);
+  }.bind(this));
+};
+
+GameMap.prototype.setTile = function (xCoord, yCoord, value) {
+  if(this.invalidValues(xCoord, yCoord)) { return -1; }
   this.tiles[yCoord * this.width + xCoord] = value;
 };
 
-Map.prototype.getValidSpawnLocation = function() {
-  var valid = false,
+GameMap.prototype.getValidSpawnLocation = function() {
+  let valid = false,
           x = 0,
           y = 0;
  
   while(!valid) {
-    x = _.floor(_.random() * this.width);
-    y = _.floor(_.random() * this.height);
-
+    x = lib.floor(_.random(0, this.width));
+    y = lib.floor(_.random(0, this.height));
     valid = this.getTile(x, y) === TILE_EMPTY;
   } 
   return { x: x, y: y }; 
 };
 
-Map.prototype._testBounds = function (x, y) {
+GameMap.prototype.invalidValues = function (x, y) {
   return (this.width <= x < 0) || (this.height <= y < 0);
 };
+
+module.exports = GameMap;
 
 
 
@@ -114,8 +122,8 @@ Map.prototype._testBounds = function (x, y) {
           //if(this.get('width')  <= x < 0) return;
           //if(this.get('height') <= y < 0) return;
 
-          //var index = y * this.get('width') + x;
-          //var map = this.get('map'); 
+          //let index = y * this.get('width') + x;
+          //let map = this.get('map'); 
   
           //console.log('Setting tile ' +x+ ', ' +y+ ' to ' +value);
           //map = map.substr(0, index) + value + map.substr(index+1);
@@ -123,12 +131,12 @@ Map.prototype._testBounds = function (x, y) {
         //},
 
         //getXBombTiles: function (xStart, xEnd, y) {
-          //var result = [],
+          //let result = [],
               //stop = false;
 
           //if(xStart > xEnd) {
-            //for( var i = xStart; i >= xEnd; i--) {
-              //var tile = this.getTile(i, y);
+            //for( let i = xStart; i >= xEnd; i--) {
+              //let tile = this.getTile(i, y);
               //if(stop) 
                 //break;
               //switch (tile) {
@@ -145,8 +153,8 @@ Map.prototype._testBounds = function (x, y) {
               //}
             //}
           //} else {
-            //for(var i = xStart; i <= xEnd; i++) {
-              //var tile = this.getTile(i, y);
+            //for(let i = xStart; i <= xEnd; i++) {
+              //let tile = this.getTile(i, y);
               //if(stop) 
                 //break;
               //switch (tile) {
@@ -169,11 +177,11 @@ Map.prototype._testBounds = function (x, y) {
         //},
 
         //getYBombTiles: function (yStart, yEnd, x) {
-          //var result = [],
+          //let result = [],
               //stop = false;
           //if(yStart > yEnd) {
-            //for( var i = yStart; i >= yEnd; i--) {
-              //var tile = this.getTile(x, i);
+            //for( let i = yStart; i >= yEnd; i--) {
+              //let tile = this.getTile(x, i);
               //if(stop)
                 //break;
               //switch (tile) {
@@ -190,10 +198,10 @@ Map.prototype._testBounds = function (x, y) {
               //}
             //}
           //} else {
-            //for(var i = yStart; i <= yEnd; i++) {
+            //for(let i = yStart; i <= yEnd; i++) {
               //if(stop)
                 //break;
-              //var tile = this.getTile(x, i);
+              //let tile = this.getTile(x, i);
               //switch (tile) {
                 //case "0":
                   //result.push(new Tile(x, i, tile));
@@ -212,7 +220,7 @@ Map.prototype._testBounds = function (x, y) {
         //},
 
         //updateMap: function (tiles) {
-          //var map = this.get('map');
+          //let map = this.get('map');
           //_.each(tiles, function (tile) {
             //this.setTile(tile.x, tile.y, TILE_EMPTY);
           //}.bind(this));

@@ -1,14 +1,16 @@
 /*jslint node: true */
 "use strict";
 
-var _ = require('lodash');
+let _ = require('lodash');
 
-var Player = require('../player');
+const TILE_EMPTY = 0;
 
-var CollisionDetector = {
+let Player = require('../player');
+
+let collisionDetector = {
 
   collision: function (actor, tile) {
-    var actorX = Math.floor(actor.x),
+    let actorX = Math.floor(actor.x),
         actorY = Math.floor(actor.y),
         tileX = Math.floor(tile.x),
         tileY = Math.floor(tile.y);
@@ -33,11 +35,31 @@ var CollisionDetector = {
   },
 
   firstCollision: function (player, tiles) {
-    return _.firstWhere(tiles, function (tile) {
+    return _.find(tiles, function (tile) {
       return this.collision(player, tile);
     }.bind(this));
-  }
+  },
 
+  mapCollision: function (x, y) {
+    return this.map.getTile(x, y) !== TILE_EMPTY;
+  }, 
+
+  bombCollision: function (x, y) {
+    return this.bombManager.hasBomb(x, y);
+  }, 
+
+  canMove: function (x, y) {
+    return !this.mapCollision(x, y) && 
+           !this.bombCollision(x, y);
+  }
+ 
 };
 
-module.exports = CollisionDetector;
+let collisionDetectorFactory = function (opts) {
+  let cd = Object.create(collisionDetector);
+  cd.map = opts.map;
+  cd.bombManager = opts.bombManager;
+  return cd;
+};
+
+module.exports = collisionDetectorFactory;

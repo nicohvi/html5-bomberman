@@ -24895,6 +24895,7 @@ var Player = require('./player');
 var player = new Player();
 
 },{"./player":5,"lodash":2}],5:[function(require,module,exports){
+/*jshint browserify: true */
 'use strict';
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
@@ -24907,10 +24908,6 @@ var _ = require('lodash');
 
 var _names = ['Frank', 'Timmy', 'Peter', 'Bent', 'Ben'];
 var _moves = ['up', 'down', 'left', 'right'];
-
-function getTick() {
-  return new Date().getTime();
-}
 
 var Player = (function () {
   function Player() {

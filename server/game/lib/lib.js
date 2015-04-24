@@ -1,22 +1,37 @@
 /*jslint node: true */
 "use strict";
 
+var _ = require ('lodash');
+
 var lib = {
 
-  // Returns map-coordinates based on position.
-  // 
-  // ex: obj.x = 16.43, obj.y = 13.2
-  // lib.coordinates(obj) -> { x: 16, y: 13 }
   coordinates: function (obj) {
-    var x = 0,
-        y = 0;
-    
-    if(typeof(obj) !== 'undefined') {
-      x = Math.floor(obj.x) || 0;
-      y = Math.floor(obj.y) || 0;
-    }
-    return { x: x, y: y };
+    return { x: lib.floor(obj.x), y: lib.floor(obj.y) };
+  },
+
+  floor: function (x) { return Math.floor(x); },
+
+  extend: function (EventEmitter) {
+    EventEmitter.prototype.onMany = function (events, handler) {
+      if (!events) { return; }
+
+      if (!(events instanceof Array)) {
+        events = [events];
+      }
+      
+      let generateCallback = function (event) {
+        let callback = function () {
+          handler.apply(this, _.flatten([event, arguments])); 
+        }.bind(this);
+        return callback;
+      }.bind(this);          
+      
+      _.forEach(events, function (event) {
+        this.addListener(event, generateCallback(event));
+      }.bind(this));
+    };
   }
+
 };
 
 module.exports = lib;

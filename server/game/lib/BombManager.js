@@ -1,21 +1,51 @@
 /*jslint node: true */
 "use strict";
 
-var util = require('util');
+let util = require('util');
 
 // Constants
-var TILE_BRICK = 1,
+let TILE_BRICK = 1,
     TILE_SOLID = 2;
 
-var _ = require('lodash');
+let _ = require('lodash');
 
-var BombManager = {
-  init: function (map) {
-    map = this.map;
+let BombManager = {
+   
+  addBomb (bomb) {
+    this.bombs[bomb.id] = bomb;
   },
 
-  getTiles: function (bomb) {
-    var horizontalTiles = this.map.getRowTiles(_.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
+  removeBomb (bomb) {
+    delete this.bombs[bomb.id];
+  },
+
+  activateBomb (bomb) {
+    this.bombs[bomb.id].active = true;
+  },
+ 
+  hasBomb (x, y) {
+    return !_.isEmpty(_.filter(this.bombs, function (bomb) {
+      return bomb.x === x && bomb.y === y;
+    }));
+  },
+  
+  getBomb (id) {
+    return this.bombs[id];
+  },
+
+   explodeBomb (id) {
+    let bomb = this.bombs[id];
+    if (typeof(bomb) === 'undefined' || bomb.exploded) { 
+      return; 
+    }
+    
+    let tiles = this.getTiles(bomb);
+    this.dangerTiles = _.flatten(this.dangerTiles.push(tiles));
+    return this.getDirtyTiles(tiles);
+  },
+  
+  getTiles (bomb) {
+    let horizontalTiles = this.map.getRowTiles(_.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
     verticalTiles = this.map.getColumnTiles(_.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
 
     horizontalTiles = this._filterTiles(horizontalTiles, bomb);
@@ -24,29 +54,38 @@ var BombManager = {
     return horizontalTiles.concat(verticalTiles);
   },
 
-  getDirtyTiles: function (tiles) {
+  getDirtyTiles (tiles) {
     return _.filter(tiles, function (tile) {
       return tile.value === TILE_BRICK;
     });
   },
 
-  _filterTiles: function (tiles, bomb) {
-    var paths = _.chunck(tiles, bomb.strength+1);
+  filterTiles (tiles, bomb) {
+    let paths = _.chunck(tiles, bomb.strength+1);
     _(paths[0]).reverse();
    
-    var test = _.times(2, function (i) {
+    let test = _.times(2, function (i) {
       return _.takeWhile(paths[i], function (tile, j) {
         return  tile.value !== TILE_SOLID ||
                 ( typeof(paths[i][j-1]) !== 'undefined' &&
                 paths[i][j-1].value !== TILE_BRICK );
       });
     });
-
+    // TODO
     console.log(util.inspect(test));
-
     return test;
   }
+
 };
 
-module.exports = BombManager;
+let bombManagerFactory = function (opts) {
+  return _.assign(Object.create(BombManager), {
+    map: opts.map,
+    bombs: {},
+    flames: {},
+    dangerTiles: []
+  });
+};
+
+module.exports = bombManagerFactory;
 

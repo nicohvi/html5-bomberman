@@ -1,18 +1,16 @@
 {
-  "name": "guys-example",
+  "name": "Socketman",
   "version": "0.0.1",
   "engines": {
-    "node": "0.6.x"
+    "node": "0.12.x"
+  },
+  "scripts": {
+    "up": "node --harmony_arrow_functions --harmony_object_literals server.js"
   },
   "dependencies": {
     "express": "~3.3.8",
-	"backbone": "0.9.1",
-	"requirejs": "1.0.7",
-	"socket.io": "0.9.12",
-	"underscore": "1.3.1",
-    "redis": "0.7.1",
-  "object-assign": "2.0.0",
-  "babel": "5.0.12" ,
-  "lodash": "3.6.0"
+	  "socket.io": "0.9.12",
+    "lodash": "3.6.0",
+    "baconjs": "0.7.53"
   }
 }

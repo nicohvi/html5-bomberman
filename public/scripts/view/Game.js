@@ -1,75 +1,79 @@
-var _ = require('lodash');
+/*jshint browserify: true */
+"use strict";
 
-var Map     = require('./Map');
-var Player  = require('./Player');
-var Bomb    = require('./Bomb');
-var Flame   = require('./Flame');
+const _ = require('lodash');
 
-var Leaderboard = require('../components/leaderboard');
+let Canvas  = require('./Canvas');
+let GameMap = require('./Map');
+let Player  = require('./player');
+let Bomb    = require('./Bomb');
+let Flame   = require('./Flame');
+let Leaderboard = require('../components/leaderboard');
 
 function getTicks() {
   return new Date().getTime();
 } 
 
-var Game = {
+let Game = {
   init: function (data) {
     this.lastTick = getTicks();
-    this.players = this._getPlayers(data.players);
+    this.players = this._getplayers(data.players);
     this.bombs = {};
     this.flames = {};
-    this.map = new Map(data.map);
-    this.canvas = this.map.canvas;
-    setTimeout(function () { this.map.draw() }.bind(this), 500);
-    // TODO: onLoadedSprite
+
+    GameMap.init(data.map);
+    Canvas.init(data.map.width, data.map.height);
     Leaderboard.load(this.players);
+
     this.update();
   },
 
-  playerJoin: function (player) {
-    console.log('player join')
-    var plr = new Player(player);
-    this.players[player.id] = plr;
+  playerJoin: function (plr) {
+    console.log('player join');
+    var newPlayer = Player(plr);
+    this.players[plr.id] = newPlayer;
     Leaderboard.load(this.players);
   },
 
   playerLeave: function (id) {
-    console.log('player leave')
-    if(_.isEmpty(this.players)) return;
+    console.log('player leave');
+    if(_.isEmpty(this.players)) { return; }
     delete this.players[id];
     Leaderboard.load(this.players);
   },
 
-  playerSpawn: function (player) {
-    console.log('player spawn')
-    var plr = this.players[player.id];
-    plr.update(player);
+  playerSpawn: function (plr) {
+    console.log('player spawn');
+    var player = this.players[plr.id];
+    player.update(plr);
   },
   
-  playerUpdate: function (player) {
-    var plr = this.players[player.id]
+  playerUpdate: function (plr) {
+    var player = this.players[plr.id];
     if(!plr) {
       console.log('Unkown update: ' +player.id);
       return;
     }  
     console.log(player.x + ' ' +player.y);
-    plr.update(player); 
+    player.update(plr); 
   },
 
-  playerDie: function (player, suicide) {
+  playerDie: function (plr, suicide) {
     console.log('player died');
-    var plr = this.players[player.id];
-    if(!plr) return;
-    plr.die();
+    var player = this.players[plr.id];
+    if(!player) { return; }
+    player.die();
     
-    if(suicide)
+    if(suicide) {
       this._playSound('suicide');
-    else {
+    } else {
       this._playSound('die');
     }
   },
 
-  playerScore: function (player) {
-    this.players[player.id].updateScore(player.score);
+  playerScore: function (plr) {
+    // TODO: CONFLATE
+    this.players[plr.id].updateScore(plr.score);
     Leaderboard.load(this.players);
   },
 
@@ -98,10 +102,10 @@ var Game = {
     }.bind(this));
   },
 
-  gameDone: function (player) {
+  gameDone: function (plr) {
     console.log('game over');
     this._playSound('win');
-    this.players[player.id].winner = true;
+    this.players[plr.id].winner = true;
     Leaderboard.load(this.players);
   },
 
@@ -109,8 +113,8 @@ var Game = {
     var now   = getTicks(),
         delta = (now - this.lastTick) / 1000;
 
-    _.each(this.players, function (player) {
-      player.animationUpdate(delta);
+    _.each(this.players, function (plr) {
+      plr.animationUpdate(delta);
     });
 
     _.each(this.bombs, function (bomb) {
@@ -121,21 +125,17 @@ var Game = {
       flame.animationUpdate(delta);
     });
 
-    this.canvas.clear();
-    this.canvas.drawFlames(this.flames);
-    this.canvas.drawPlayers(this.players);
-    this.canvas.drawBombs(this.bombs);
-    
+    Canvas.update(this.players, this.flames, this.bombs);
+
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
-    
   },
 
-  _getPlayers: function (players) {
-    if(_.isEmpty(players)) return players;
+  _getplayers: function (players) {
+    if(_.isEmpty(players)) { return players; }
     var hash = {};
-    _.each(players, function (player) {
-      hash[player.id] = new Player(player);
+    _.each(players, function (plr) {
+      hash[plr.id] = Player(plr);
     }.bind(this));
     return hash;
   },
@@ -150,6 +150,6 @@ var Game = {
     var audio = new Audio('../../sounds/'+clip+'.wav');
     audio.play();
   }
-}
+};
 
 module.exports = Game;

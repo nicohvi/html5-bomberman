@@ -1,313 +1,298 @@
 /*jslint node: true */
 "use strict";
 
-var _ = require('lodash');
-var $ = require('./lib/lib');
-var util = require('util');
+let _ = require('lodash');
+let B = require('baconjs').Bacon;
+//let util = require('util');
+let EventEmitter = require('events').EventEmitter;
+
+let lib = require('./lib/lib');
+
+lib.extend(EventEmitter);
 
 // Constants
-var BOMB_TIMER = 3000,
-  BOMB_STRENGTH = 4,
-  COOLDOWN_TIME = 1000,
-  SPAWNING_TIME = 6000,
-  FUSE_TIME = 500,
-  PLAYER_GIRTH = 0.35,
-  WINNING_SCORE = 5,
-  MAP_WIDTH = 50,
-  MAP_HEIGHT = 40;
+const BOMB_TIMER = 3000,
+      BOMB_STRENGTH = 4,
+      COOLDOWN_TIME = 1000,
+      SPAWNING_TIME = 6000,
+      FUSE_TIME = 500,
+      PLAYER_GIRTH = 0.35,
+      WINNING_SCORE = 5,
+      MAP_WIDTH = 50,
+      MAP_HEIGHT = 40;
 
 // Components
-var Player  = require('./player');
-var Bomb    = require('./bomb');
-var Flame   = require('./flame');
-var Map     = require('./map');
-var CollisionDetector = require('./lib/CollisionDetector');
-var BombManager       = require('./lib/BombManager');
+let Player  = require('./player');
+let Bomb    = require('./bomb');
+let Flame   = require('./flame');
+let GameMap = require('./map');
+let CollisionDetector = require('./lib/CollisionDetector');
+let BombManager       = require('./lib/BombManager');
 
-var bombId = 0,
+let bombId = 0,
     flameId = 0;
 
-function getTicks() {
-  return new Date().getTime();
-}
+let Game = {
 
-function Game () {
-  this.players = {};
-  this.bombs = {};
-  this.flames = {};
-  this.map = new Map({ width: MAP_WIDTH, height: MAP_HEIGHT });
-  this.done = false;            
-  BombManager.init(this.map);
+  init () {
+    this.players = {};
+    this.map = new GameMap({ width: MAP_WIDTH, height: MAP_HEIGHT });
+    this.bombManager = BombManager(this.map);
+    this.collisionDetector = CollisionDetector({ map: this.map, bombManager: this.bombManager});
 
-  this.lastTick = getTicks();
-  // 60 Hz: 1/60 = 0.167 ~ 17
-  setInterval(this.update.bind(this), 17);
-}
+    this.done = false;            
 
-// TODO: add flames and bombs 
-Game.prototype.getState = function () {
-  return { players: this.players, map: this.map.getMap() };
-};
+    this.update.call(this);
+    // 60 Hz: 1/60 = 0.167 ~ 17
+    setInterval(this.update.bind(this), 17);
+  },
 
-Game.prototype.addPlayer = function (data) {
-  this.log('adding player with id: ' +data.socketId);
-  var player = new Player(data);
-  this.players[data.socketId] = player;
-  return player;
-};
+  state () { 
+    return { players: this.players, map: this.map };
+  },
 
-Game.prototype.spawnPlayer = function (player) {
-  var loc = this.map.getValidSpawnLocation();
-  this.log('{'+loc.x+','+loc.y+'}: Spawning player: ' +player.name);
-  player.spawn(loc);
-  this.trigger('player-spawn', player);
-};
+  addPlayer (data) {
+    let player = new Player(data);
+    this.players[data.id] = player;
 
-Game.prototype.removePlayer = function (socketId) {
-  this.log('Removing player with id: ' +socketId);
-  delete this.players[socketId];
-};
+    this.emit('player-join', { player: player });
+    this.spawnPlayer(player);
+  },
 
-Game.prototype.playerStop = function (socketId) {
-  var player = this.players[socketId];
+  spawnPlayer (player) {
+    let loc = this.map.getValidSpawnLocation();
+    this.log('{'+loc.x+','+loc.y+'}: Spawning player: ' +player.name);
+    player.spawn(loc);
+    this.emit('player-spawn', { player: player });
+  },
 
-  if(typeof(player) === 'undefined') {
-      this.log('player not found');
+  removePlayer (id) {
+    this.log('Removing player with id: ' +id);
+    delete this.players[id];
+    this.emit('player-leave', { id: id });
+  },
+
+  stopPlayer (id) {
+    let player = this.players[id];
+
+    if(typeof(player) === 'undefined' || !player.alive) {
+        return;
+    }
+    
+    this.emit('player-update', { player: player.stop() });
+  },
+
+  movePlayer (data) {
+    let player = this.players[data.id];
+    if(typeof(player) === 'undefined' || !player.alive) { return; }
+    this.emit('player-update', { player: player.move(data.dir) });
+  },
+
+  attemptMove (player, delta) {
+    let playerX     = player.x,
+        playerY     = player.y,
+        dx          = delta.dx,
+        dy          = delta.dy,
+        newX = Math.floor(playerX + dx + this.direction(dx)*PLAYER_GIRTH),
+        newY = Math.floor(playerY + dy + this.direction(dy)*PLAYER_GIRTH);
+
+    // x-axis
+    if(!this.collisionDetector.canMove(newX, playerY)) {
+      dx = 0;
+    }
+    
+    // y-axis
+    if(!this.collisionDetector.canMove(playerX, newY)) {
+      dy = 0;
+    }
+
+    return player.deltaMove(dx, dy);
+  },
+
+  placeBomb (playerId) {
+    let player  = this.players[playerId];
+
+    if(player.cooldown || !player.alive || this.done) {
       return;
     }
 
-  return player.stop();
-};
+    let bomb = Bomb(bombId++, player, BOMB_STRENGTH, this.lastTick);
 
-Game.prototype.playerMove = function (socketId, data) {
-  var player = this.players[socketId];
+    player.setCooldown(this.lastTick);
+    this.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
 
-  if(typeof(player) === 'undefined') {
-    this.log('player not found');
-    return;
-  }
-  
-  if(!player.alive) {
-    return;
-  }
+    this.bombManager.addBomb(bomb);
+    this.emit('place-bomb', bomb);
+  },
 
-  return player.move(data.dir);
-};
+  gameOver (winner) {  
+    this.done = true;
+    this.winner = winner;
+    this.emit('game-done', winner);
+  },
 
-Game.prototype.attemptMove = function (player, delta) {
-  var pCoords = $.coordinates(player),
-      dx          = delta.dx,
-      dy          = delta.dy,
-      newX = Math.floor(player.x + dx + this._direction(dx)*PLAYER_GIRTH),
-      newY = Math.floor(player.y + dy + this._direction(dy)*PLAYER_GIRTH);
-  // x-axis
-  if(!this.map.canMove(newX, pCoords.y)) {
-    dx = 0;
-  }
+  scoreUpdate (player, score) {
+    player.updateScore(score);
+    this.emit('player-score', { player: player});
+  },
 
-  var bombTest = this.hasBomb({x: newX, y: pCoords.y});
-  if(bombTest && bombTest.active) {
-    dx = 0;
-  }
-
-  // y-axis
-  if(!this.map.canMove(pCoords.x, newY)) {
-    dy = 0;
-  }
-
-  bombTest = this.hasBomb({ x: pCoords.x, y: newY});
-  if(bombTest && bombTest.active) {
-    dy = 0;
-  }
-
-  if(dx !== 0 || dy !== 0) {
-    player.deltaMove(dx, dy);
-    return true;
-  } else {
-    return false;
-  }
-};
-
-Game.prototype.placeBomb = function (socketId) {
-  var player  = this.players[socketId];
-
-  if(player.cooldown) {
-    this.log('payer is cooling down');
-    return null;
-  }
-
-  if(!player.get('alive') || this.done) {
-    return null;
-  }
-
-  var bomb = new Bomb(bombId++, player, BOMB_STRENGTH, this.lastTick);
-
-  player.coolDown();
-  this.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
-
-  this.bombs[bomb.id] = bomb;
-  return bomb;
-};
-
-
-        
-Game.prototype.update = function () {
-  var now = getTicks();
-
-  if(this.done) {
-    return;
-  }
-
-  _.forEach(this.players, function (player) {
-    if(!player.alive) {
-      if(now - player.diedAt > SPAWNING_TIME) {
-        this.spawnPlayer(player);
-      }
+  explodeBomb (bomb) {  
+    // Bomb has already been exploded through the magic
+    // of chaining.
+    if(typeof(bomb) === 'undefined' || bomb.exploded) {
       return;
     }
 
-    if(player.moving) {
-      var delta = player.getAttemptedMove();
-      
-      if(this.attemptMove(player, delta)) {
-        this.trigger('player-update', player);
-      }
-    }
+    // returns dirty tiles from explosion
+    let dirtyTiles = this.bombManager.explodeBomb(bomb);
 
-    if(player.get('score') >= WINNING_SCORE) {
-      this.endGame(player);
+    this.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
+
+    bomb.exploded = true;
+    this.map.updateMap(dirtyTiles);
+    this.emit(
+      'bomb-explode', 
+      { bomb: bomb, dirtyTiles: dirtyTiles }
+    );
+    
+    //this.chainBombs(tiles, bomb.id);
+  },
+
+  update () {
+    let tick = this.tick();
+
+    if(this.done) {
       return;
     }
 
-    if(player.cooldown && (now - player.lastBomb > COOLDOWN_TIME)) {
-      player.stopCooldown();
+    this.updatePlayers(tick);
+    //this.updateBombs();
+    this.lasTick = tick;
+  },
+
+  updatePlayers (tick) {
+    let winner = this.checkWinners();
+    
+    if(winner) { 
+      return this.gameOver(winner);
     }
 
-    var flame = CollisionDetector.firstCollision(player, this.flames);
-    if(flame) {
-      var killer = this.players[flame.playerId];
-      var suicide = killer.id === player.id; 
-      this.log(player.name+ ' died, by suicide? ' +suicide);
-      player.die(now);
-      this.trigger('player-die', player, suicide);
-      if(suicide) {
-        this.scoreUpdate(player, -1);
-      } else {
-        this.scoreUpdate(killer, 1);
-      }
-    }
-  }.bind(this));
+    this.updatePlayerMovement(tick);
+  },
 
-  _.forEach(this.bombs, function (bomb) {
-    if(now - bomb.placedAt > BOMB_TIMER) {
-      this.bombExplode(bomb);
-    }
-    else if(bomb.exploded) {
-      delete this.bombs[bomb.id];
-    }
-    else if(now - bomb.placedAt > FUSE_TIME) {
-      bomb.active = true;
-    }
-  }.bind(this));
+  checkWinners () {
+    return _.find(this.players,function (plr) {
+      return plr.score >= WINNING_SCORE;
+    });
+  },
 
-  this.lastTick = now;
-};
-
-Game.prototype.endGame = function (winner) {
-  this.done = true;
-  this.winner = winner;
-  this.trigger('game-done', winner);
-};
-
-Game.prototype.scoreUpdate = function (player, score) {
-  player.updateScore(score);
-  this.trigger('player-score', player);
-};
-
-Game.prototype.bombExplode = function (bomb) {
-  // Bomb has already been exploded through the magic
-  // of chaining.
-  if(typeof(bomb) === 'undefined' || bomb.exploded) {
-    return;
-  }
-
-  var tiles = [];
-
-  this.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
-
-  bomb.exploded = true;
-  
-  tiles = BombManager.getTiles(bomb);
-  var dirtyTiles = BombManager.getDirtyTiles(tiles);
-  //tiles = _.filter(tiles, function (tile) {
-    //return typeof(tile) !== "undefined";
-  //});
-
-  this.spawnFlames(tiles, bomb.playerId);
-
-  this.map.updateMap(dirtyTiles);
-
-  this.trigger(
-    'bomb-explode', 
-    { bomb: bomb, dirtyTiles: dirtyTiles }
-  );
-  
-  this.chainBombs(tiles, bomb.id);
-};
-
-Game.prototype.getBombTiles = function (x,y) {
-  var result = [];
-  // TODO: takeWhile
-  result = result.concat(this.map.getXBombTiles(x, x-BOMB_STRENGTH, y));
-  result = result.concat(this.map.getXBombTiles(x, x +BOMB_STRENGTH, y));
-  result = result.concat(this.map.getYBombTiles(y, y-BOMB_STRENGTH, x));
-  result = result.concat(this.map.getYBombTiles(y, y+BOMB_STRENGTH, x));
-  return result;
-};
-
-Game.prototype.spawnFlames = function (tiles, playerId) {
-  var newFlames = [];
-  _.forEach(tiles, function (tile) {
-    var flame = new Flame(tile.x, tile.y, flameId++, playerId); 
-    this.flames[flame.id] = flame;
-    newFlames.push(flame);
-  }.bind(this));
-  this.trigger('flame-spawn', newFlames);
-  //setTimeout(this.killFlames.bind(this, newFlames), 1000);
-};
-
-Game.prototype.killFlames = function (flames) {
-  _.forEach(flames, function (flame) {
-    delete this.flames[flame.id];
-  }.bind(this));
-  this.trigger('flame-die', flames);
-};
-
-Game.prototype.chainBombs = function (tiles, bombId) {
-  var bombs = [];
-  _.forEach(this.bombs, function (bomb) {
-    _.forEach(tiles, function (tile) {
-      if(CollisionDetector.collision(bomb, tile) && bomb.id !== bombId) {
-        bombs.push(bomb);
-      }
+  updatePlayerMovement (tick) {
+    B.fromBinder(function (sink) {
+      _.forEach(this.players, function (plr) {
+        return sink(plr);
+      }.bind(this));
+    }.bind(this))
+    .filter(plr => plr.alive && plr.moving)
+    .map(function (plr) {
+      let delta = plr.getAttemptedMove();
+      return this.attemptMove(plr, delta);
+    }.bind(this))
+    .onValue(function (plr) { 
+      this.emit('player-update', { player: plr });
     }.bind(this));
-  }.bind(this)); 
+  },
 
-  _.forEach(bombs, function(bomb) { 
-      this.log('should be chained: ' +util.inspect(bomb));
-      this.bombExplode(bomb);
-  }.bind(this));
-};
+  //updateBombs (tick) {
+    //this.explodeBombs(tick);
+    //R.pipe(
+    //R.filter(function (bomb) { return bomb.exploded; }),
+    //R.forEach(function (bomb) { this.bombManager.removeBomb(bomb); }.bind(this))
+    //)(this.players);
+  //}, 
+
+  //explodeBombs (tick) {
+    //let liveBombs = R.filter(function (bomb) { return !bomb.exploded; })(this.bombManager.bombs);
+
+      //R.pipe(
+      //R.filter(function (bomb) {
+        //return !bomb.active && (tick - bomb.placedAt > FUSE_TIME);
+      //}),
+      //R.forEach(function (bomb) {
+        //this.bombManager.activateBomb(bomb);
+      //}.bind(this))
+      //)(liveBombs);
+
+      //R.pipe(
+      //R.filter(function (bomb) {
+        //return bomb.active && (tick - bomb.placedAt > BOMB_TIMER);
+      //}),
+      //R.forEach(function (bomb) {
+        //this.bombExplode(bomb);
+      //}.bind(this))
+      //)(liveBombs);
+  //},
+
+  log (message) {
+    let prefix = "Logged from game.js: ";
+    console.log(prefix + message);
+  },
+
+//Game.prototype.spawnFlames = function (tiles, playerId) {
+  //let newFlames = [];
+  //_.forEach(tiles, function (tile) {
+    //let flame = new Flame(tile.x, tile.y, flameId++, playerId); 
+    //this.flames[flame.id] = flame;
+    //newFlames.push(flame);
+  //}.bind(this));
+  //this.emit('flame-spawn', newFlames);
+  ////setTimeout(this.killFlames.bind(this, newFlames), 1000);
+//};
+
+//Game.prototype.killFlames = function (flames) {
+  //_.forEach(flames, function (flame) {
+    //delete this.flames[flame.id];
+  //}.bind(this));
+  //this.emit('flame-die', flames);
+//};
+
+//Game.prototype.chainBombs = function (tiles, bombId) {
+  //let bombs = [];
+  //_.forEach(this.bombs, function (bomb) {
+    //_.forEach(tiles, function (tile) {
+      //if(CollisionDetector.collision(bomb, tile) && bomb.id !== bombId) {
+        //bombs.push(bomb);
+      //}
+    //}.bind(this));
+  //}.bind(this)); 
+
+  //_.forEach(bombs, function(bomb) { 
+      //this.log('should be chained: ' +util.inspect(bomb));
+      //this.bombExplode(bomb);
+  //}.bind(this));
+//};
+
+//;
 
 // utility
 
-Game.prototype.log = function (message) {
-  console.log(message);
+  direction (x) {
+    // x > 0  -> 1
+    // x == 0 -> 0
+    // x < 0  -> -1
+    return x > 0 ? 1 : x < 0 ? -1 : 0;
+  },
+
+  tick () {
+    return new Date().getTime();
+  }
 };
 
-Game.prototype._direction = function (x) {
-  // x > 0  -> 1
-  // x == 0 -> 0
-  // x < 0  -> -1
-  return x > 0 ? 1 : x < 0 ? -1 : 0;
+let gameFactory = function () {
+  let game = Object.create(_.assign({}, EventEmitter.prototype, Game));
+  // extend the game with the eventemitter prototype
+  game.init();
+
+  return game;
 };
+
+module.exports = gameFactory;

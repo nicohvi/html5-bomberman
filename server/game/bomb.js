@@ -1,17 +1,23 @@
 /*jslint node: true */
 "use strict";
 
-var lib = require('./lib/lib');
+let lib = require('./lib/lib');
 
-var Bomb = function (id, player, strength, time) {
-  this.id = id;
-  this.x = lib.coordinates(player.x);
-  this.y = lib.coordinates(player.y);
-  this.strength = strength;
-  this.playerId = player.id;
-  this.exploded = false;
-  this.placedAt = time;
-  this.active = false;
+let Bomb = {
+  active: false,
+  exploded: false
 };
 
-module.exports = Bomb;
+let BombFactory = function (id, player, strength, time) {
+  var bomb = Object.create(Bomb);
+  bomb.id = id;
+  bomb.x = lib.floor(player.x);
+  bomb.y = lib.floor(player.y);
+  bomb.strength = strength;
+  bomb.playerId = player.id;
+  bomb.placedAt = time;
+
+  return bomb;
+};
+
+module.exports = BombFactory;

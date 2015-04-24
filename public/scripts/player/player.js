@@ -1,13 +1,12 @@
+/*jshint browserify: true */
+"use strict";
+
 var io  = require('socket.io-client');
 var $   = require('jquery');
 var _   = require('lodash');
 
 var _names = ['Frank', 'Timmy', 'Peter', 'Bent', 'Ben'];
 var _moves = ['up', 'down', 'left', 'right'];
-
-function getTick() {
-  return new Date().getTime();
-}
 
 class Player {
   constructor () {
@@ -19,7 +18,7 @@ class Player {
   moveRandomly () {
     setInterval(function () {
        var move = _.sample(_moves);
-       var doMove = this.doMove.bind(this, move)
+       var doMove = this.doMove.bind(this, move);
        var interval = setInterval(doMove, 10);
       setTimeout( function () { clearInterval(interval); }, 1000);
     }.bind(this), 2000);

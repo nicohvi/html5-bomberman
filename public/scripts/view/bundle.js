@@ -44699,18 +44699,17 @@ module.exports = Bomb;
 
 
 },{}],164:[function(require,module,exports){
+/*jshint browserify: true */
 'use strict';
-
-var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 var $ = require('jquery');
 var _ = require('lodash');
 
+var Map = require('./Map');
+
+var SpritesToLoad = 7;
+
 var SQUARE_SIZE = 16,
-    VIEW_WIDTH = 50,
-    VIEW_HEIGHT = 40,
     CHAR_WIDTH = 22,
     CHAR_HEIGHT = 22,
     CHAR_X = 11,
@@ -44719,203 +44718,389 @@ var SQUARE_SIZE = 16,
     BOMB_ANIM_SPEED = 0.1,
     FLAME_ANIM_SPEED = 0.15;
 
-var Canvas = (function () {
-  function Canvas(map) {
-    _classCallCheck(this, Canvas);
-
-    this.dirtyZones = [];
-    this.canvases = [];
+var canvas = {
+  init: function init(width, height) {
+    this.dirtyTiles = [];
     this.charSprites = {};
+
+    this.width = width * SQUARE_SIZE;
+    this.height = height * SQUARE_SIZE;
+    this.mapCanvas = this.canvasGenerator(this.width, this.height).get(0).getContext('2d');
+    this.charCanvas = this.canvasGenerator(this.width, this.height).get(0).getContext('2d');
     this.repaint = true;
-    this.map = map;
     this.initialized = false;
 
-    // map
-    this.canvases[0] = this._canvas(VIEW_WIDTH * SQUARE_SIZE, VIEW_HEIGHT * SQUARE_SIZE, 0);
+    this.loadSprites();
+  },
 
-    // sprites
-    this.canvases[1] = this._canvas(VIEW_WIDTH * SQUARE_SIZE, VIEW_HEIGHT * SQUARE_SIZE, 1);
+  clear: function clear() {
+    this.charCanvas.clearRect(0, 0, this.width, this.height);
+  },
 
-    // TODO: Move
-    _.each(this.canvases, function ($el) {
-      $('body').append($el);
-    });
+  update: function update(players, bombs, flames) {
+    if (!this.initialized) {
+      return;
+    }
 
-    _.each(['john', 'joe', 'betty', 'mary'], (function (name) {
-      this.charSprites[name] = this._loadSprite('../../sprites/char-' + name + '.png');
+    this.clear();
+    _.forEach(players, this.drawPlayer.bind(this));
+    _.forEach(bombs, this.drawBomb.bind(this));
+    _.forEach(flames, this.drawFlame.bind(this));
+  },
+
+  drawPlayer: function drawPlayer(player) {
+    var frame = Math.floor(player.frame / MOVE_ANIM_SPEED),
+        frameX = undefined,
+        frameY = undefined,
+        x = undefined,
+        y = undefined,
+        sprite = undefined;
+
+    // Tile coordinates
+    if (player.alive) {
+      frameX = frame % 3;
+      if (!player.moving) {
+        frameX = 1;
+      }
+      frameY = player.getDirectionFrame();
+    } else {
+      frameY = Math.floor(frame / 3) + 4;
+      frameX = frame % 3;
+    }
+
+    x = Math.round(player.x * SQUARE_SIZE) - CHAR_X;
+    y = Math.round(player.y * SQUARE_SIZE) - CHAR_Y;
+
+    sprite = this.charSprites[player.character];
+
+    // 8 is the last row in the spreadsheet.
+    if (frameY < 8) {
+      this.charCanvas.drawImage(sprite, frameX * CHAR_WIDTH, frameY * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT, x, y, CHAR_WIDTH, CHAR_HEIGHT);
+    }
+  },
+
+  drawBomb: function drawBomb(bomb) {
+    var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
+        x = Math.floor(bomb.x) * SQUARE_SIZE,
+        y = Math.floor(bomb.y) * SQUARE_SIZE;
+
+    this.charCanvas.drawImage(this.bombSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
+  },
+
+  drawFlame: function drawFlame(flame) {
+    var frame = Math.floor(flame.frame / FLAME_ANIM_SPEED),
+        x = Math.floor(flame.x) * SQUARE_SIZE,
+        y = Math.floor(flame.y) * SQUARE_SIZE;
+
+    if (frame > 3) {
+      frame = 6 - frame;
+    }
+
+    this.charCanvas.drawImage(this.flameSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
+  },
+
+  drawMap: function drawMap() {
+    if (!this.initialized) {
+      return;
+    }
+
+    if (this.repaint) {
+      return this.redrawMap();
+    }
+
+    // Draw dirty zones
+    _.forEach(this.dirtyTiles, (function (dirtyTile) {
+      var newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
+      this.drawTile(dirtyTile.x, dirtyTile.y, newTile);
+    }).bind(this));
+    //for(var j = 0; j < zone.width; j++) {
+    //for(var k = 0; k < zone.height; k++) {
+    //var cx    = j + zone.x,
+    //cy    = k + zone.y,
+
+    //drawnTiles++;
+    //} // k
+    //} // j
+    //} // i
+
+    this.dirtyTiles = [];
+  },
+
+  // full repaint
+  redrawMap: function redrawMap() {
+    _.times(Map.height, (function (y) {
+      _.times(Map.width, (function (x) {
+        var tile = Map.getTile(x, y);
+        this.drawTile(x, y, tile);
+      }).bind(this));
     }).bind(this));
 
-    this.flameSprite = this._loadSprite('../../sprites/flames.png');
-    this.bombSprite = this._loadSprite('../../sprites/bombs.png');
-    this.tileSprite = this._loadSprite('../../sprites/tiles.png');
+    this.repaint = false;
+  },
+
+  drawTile: function drawTile(xCoord, yCoord, tile) {
+    this.mapCanvas.drawImage(this.tileSprite, tile * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, xCoord * SQUARE_SIZE, yCoord * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
+  },
+
+  addDirtyTiles: function addDirtyTiles(tiles) {
+    _.forEach(tiles, (function (tile) {
+      console.log('dirty tile: ' + tile.x + ', ' + tile.y);
+      var x = Math.floor(tile.x),
+          y = Math.floor(tile.y);
+
+      this.addDirtyZone(x, y);
+    }).bind(this));
+  },
+
+  addDirtyZone: function addDirtyZone(x, y) {
+    //if(typeof(x) == 'undefined')
+    //this.repaint = true
+    //else if (typeof(width) == 'undefined') {
+    //width = 1;
+    //height = 1;
+    //}
+
+    this.dirtyTiles.push({ x: Math.floor(x), y: Math.floor(y) });
+    //width: Math.ceil(width), height: Math.ceil(height)
+  },
+
+  canvasGenerator: function canvasGenerator(width, height) {
+    var $canvas = $('<canvas width="' + width + '" height="' + height + '"class="game-canvas" />');
+    $('body').append($canvas);
+    return $canvas;
+  },
+
+  loadSprites: function loadSprites() {
+    _.each(['john', 'joe', 'betty', 'mary'], (function (name) {
+      this.charSprites[name] = this.loadSprite('../../sprites/char-' + name + '.png');
+    }).bind(this));
+
+    this.flameSprite = this.loadSprite('../../sprites/flames.png');
+    this.bombSprite = this.loadSprite('../../sprites/bombs.png');
+    this.tileSprite = this.loadSprite('../../sprites/tiles.png');
+  },
+
+  loadSprite: function loadSprite(path) {
+    var sprite = new Image();
+    sprite.src = path;
+    sprite.onload = this.onSpriteLoaded.bind(this);
+    return sprite;
+  },
+
+  onSpriteLoaded: function onSpriteLoaded() {
+    SpritesToLoad -= 1;
+    if (SpritesToLoad <= 0) {
+      this.initialized = true;
+      this.drawMap();
+    }
   }
+};
 
-  _createClass(Canvas, [{
-    key: 'draw',
+module.exports = canvas;
 
-    // init
-    value: function draw() {
-      this.drawMap();
-    }
-  }, {
-    key: 'dirtyTiles',
-    value: function dirtyTiles(tiles) {
-      _.each(tiles, (function (tile) {
-        console.log('dirty tile: ' + tile.x + ', ' + tile.y);
-        var x = Math.floor(tile.x),
-            y = Math.floor(tile.y);
+//let canvasFactory = function canvasFactory (map) {
+//let newCanvas = Object.create(canvas, {
+//dirtyTiles: [],
+//mapCanvas:  this._canvasGenerator(map.width*SQUARE_SIZE,
+//map.height*SQUARE_SIZE),
+//mapCtx: this.mapCanvas.get(0).getContext('2d'),
+//charCanvas: this._canvasGenerator(map.width*SQUARE_SIZE,
+//map.height*SQUARE_SIZE),
+//charCtx: this.mapCanvas.get(0).getContext('2d'),
+//repaint: true,
+//map: map,
+//initialized: false
+//});
 
-        this.map.updateTile(x, y, '0');
-        this.addDirtyZone(x, y, 1, 1);
-      }).bind(this));
-      this.drawMap();
-    }
-  }, {
-    key: 'addDirtyZone',
-    value: function addDirtyZone(x, y, width, height) {
+//newCanvas._loadSprites(this._onSpriteLoaded.bind(this));
+//return newCanvas;
+//};
 
-      if (typeof x == 'undefined') this.repaint = true;else if (typeof width == 'undefined') {
-        width = 1;
-        height = 1;
-      }
+//module.exports = canvasFactory;
 
-      this.dirtyZones.push({
-        x: Math.floor(x), y: Math.floor(y),
-        width: Math.ceil(width), height: Math.ceil(height)
-      });
-    }
-  }, {
-    key: '_canvas',
-    value: function _canvas(width, height, i) {
-      var $canvas = $('<canvas width="' + width + '" height="' + height + '" data-index="' + i + '" class=" game-canvas ' + 'canvas-' + i + '"/>');
-      return $canvas;
-    }
-  }, {
-    key: '_loadSprite',
-    value: function _loadSprite(path) {
-      // TODO: Image
-      return $('<img src="' + path + '" />').get(0);
-    }
-  }, {
-    key: 'drawMap',
-    value: function drawMap() {
-      var mapCanvas = this.canvases[0].get(0),
-          ctx = mapCanvas.getContext('2d'),
-          tileSprite = this.tileSprite,
-          drawnTiles = 0;
+// map
+//this.canvases[0] = this._canvas(
+//(VIEW_WIDTH*SQUARE_SIZE),
+//(VIEW_HEIGHT*SQUARE_SIZE),
+//0);
 
-      if (this.repaint) this.addDirtyZone(0, 0, this.map.width, this.map.height);
+// sprites
+//this.canvases[1] = this._canvas(
+//(VIEW_WIDTH*SQUARE_SIZE),
+//(VIEW_HEIGHT*SQUARE_SIZE),
+//1);
 
-      // Draw dirty zones
-      for (var i = 0; i < this.dirtyZones.length; i++) {
-        var zone = this.dirtyZones[i];
-        for (var j = 0; j < zone.width; j++) {
-          for (var k = 0; k < zone.height; k++) {
-            var cx = j + zone.x,
-                cy = k + zone.y,
-                tile = this.map.getTile(cx, cy);
-            ctx.drawImage(tileSprite, tile * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, cx * SQUARE_SIZE, cy * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE);
-            drawnTiles++;
-          } // k
-        } // j
-      } // i
+// TODO: Move
+//_.each(this.canvases, function ($el) {
+//$('body').append($el);
+//});
 
-      this.dirtyZones = [];
-      this.repaint = false;
-    }
-  }, {
-    key: 'clear',
-    value: function clear() {
-      var charCanvas = this.canvases[1],
-          ctx = charCanvas.get(0).getContext('2d');
+//_.each(['john', 'joe', 'betty', 'mary'], function (name) {
+//this.charSprites[name] = this._loadSprite('../../sprites/char-'+name+'.png');
+//}.bind(this));
 
-      ctx.clearRect(0, 0, charCanvas.width(), charCanvas.height());
-    }
-  }, {
-    key: 'drawPlayers',
-    value: function drawPlayers(players) {
-      var charCanvas = this.canvases[1],
-          ctx = charCanvas.get(0).getContext('2d');
+//this.flameSprite  = this._loadSprite('../../sprites/flames.png');
+//this.bombSprite   = this._loadSprite('../../sprites/bombs.png');
+//this.tileSprite   = this._loadSprite('../../sprites/tiles.png');
+//}
 
-      _.each(players, (function (player) {
-        this._drawPlayer(player, ctx);
-      }).bind(this));
-    }
-  }, {
-    key: '_drawPlayer',
-    value: function _drawPlayer(player, ctx) {
-      var frame = Math.floor(player.frame / MOVE_ANIM_SPEED),
-          frameX,
-          frameY,
-          x,
-          y,
-          sprite;
+// init
 
-      // Tile coordinates
-      if (player.alive) {
-        frameX = frame % 3;
-        if (!player.moving) frameX = 1;
-        frameY = player.orient;
-      } else {
-        frameY = Math.floor(frame / 3) + 4;
-        frameX = frame % 3;
-      }
+//dirtyTiles (tiles) {
+//_.each(tiles, function (tile) {
+//console.log('dirty tile: ' +tile.x+ ', ' +tile.y);
+//var x = Math.floor(tile.x),
+//y = Math.floor(tile.y);
 
-      x = Math.round(player.x * SQUARE_SIZE) - CHAR_X;
-      y = Math.round(player.y * SQUARE_SIZE) - CHAR_Y;
+//this.map.updateTile(x, y, "0");
+//this.addDirtyZone(x, y, 1, 1);
+//}.bind(this));
+//this.drawMap();
+//}
 
-      sprite = this.charSprites[player.character];
+//addDirtyZone (x, y, width, height) {
 
-      // 8 is the last row in the spreadsheet.
-      if (frameY < 8) {
-        ctx.drawImage(sprite, frameX * CHAR_WIDTH, frameY * CHAR_HEIGHT, CHAR_WIDTH, CHAR_HEIGHT, x, y, CHAR_WIDTH, CHAR_HEIGHT);
-      }
-    }
-  }, {
-    key: 'drawBombs',
-    value: function drawBombs(bombs) {
-      var ctx = this.canvases[1].get(0).getContext('2d');
-      _.each(bombs, (function (bomb) {
-        this._drawBomb(bomb, ctx);
-      }).bind(this));
-    }
-  }, {
-    key: '_drawBomb',
-    value: function _drawBomb(bomb, ctx) {
-      var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
-          x = Math.floor(bomb.x) * SQUARE_SIZE,
-          y = Math.floor(bomb.y) * SQUARE_SIZE;
+//if(typeof(x) == 'undefined')
+//this.repaint = true
+//else if (typeof(width) == 'undefined') {
+//width = 1;
+//height = 1;
+//}
 
-      ctx.drawImage(this.bombSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
-    }
-  }, {
-    key: 'drawFlames',
-    value: function drawFlames(flames) {
-      var ctx = this.canvases[1].get(0).getContext('2d');
-      _.each(flames, (function (flame) {
-        this._drawFlame(flame, ctx);
-      }).bind(this));
-    }
-  }, {
-    key: '_drawFlame',
-    value: function _drawFlame(flame, ctx) {
-      var frame = Math.floor(flame.frame / FLAME_ANIM_SPEED),
-          x = Math.floor(flame.x) * SQUARE_SIZE,
-          y = Math.floor(flame.y) * SQUARE_SIZE;
+//this.dirtyZones.push({
+//x: Math.floor(x), y: Math.floor(y),
+//width: Math.ceil(width), height: Math.ceil(height)
+//});
+//}
 
-      if (frame > 3) frame = 6 - frame;
+//_canvas (width, height, i) {
+//var $canvas = $('<canvas width="' +width+
+//'" height="' +height+
+//'" data-index="' +i+ '" class=" game-canvas ' +
+//'canvas-' +i+ '"/>');
+//return $canvas;
+//}
 
-      ctx.drawImage(this.flameSprite, frame * SQUARE_SIZE, 0, SQUARE_SIZE, SQUARE_SIZE, x, y, SQUARE_SIZE, SQUARE_SIZE);
-    }
-  }]);
+//_loadSprite (path) {
+//// TODO: Image
+//return $('<img src="'+path+'" />').get(0);
+//}
 
-  return Canvas;
-})();
+//drawMap () {
+//var mapCanvas   = this.canvases[0].get(0),
+//ctx         = mapCanvas.getContext('2d'),
+//tileSprite  = this.tileSprite,
+//drawnTiles  = 0;
 
-module.exports = Canvas;
+//if(this.repaint)
+//this.addDirtyZone(0, 0, this.map.width, this.map.height)        
+
+//// Draw dirty zones
+//for(var i = 0; i < this.dirtyZones.length; i++) {
+//var zone = this.dirtyZones[i];
+//for(var j = 0; j < zone.width; j++) {
+//for(var k = 0; k < zone.height; k++) {
+//var cx    = j + zone.x,
+//cy    = k + zone.y,
+//tile  = this.map.getTile(cx, cy);
+//ctx.drawImage(tileSprite,
+//tile * SQUARE_SIZE, 0,
+//SQUARE_SIZE, SQUARE_SIZE,
+//cx*SQUARE_SIZE, cy*SQUARE_SIZE,
+//SQUARE_SIZE, SQUARE_SIZE);
+//drawnTiles++;
+//} // k
+//} // j
+//} // i
+
+//this.dirtyZones = [];
+//this.repaint = false;
+//}
+
+//clear () {
+//var charCanvas = this.canvases[1],
+//ctx = charCanvas.get(0).getContext('2d');
+
+//ctx.clearRect(0,0, charCanvas.width(), charCanvas.height());
+//}
+
+//drawPlayers (players) {
+//var charCanvas = this.canvases[1],
+//ctx = charCanvas.get(0).getContext('2d');
+
+//_.each(players, function (player) {
+//this._drawPlayer(player, ctx);
+//}.bind(this));
+//}
+
+//_drawPlayer (player, ctx) {
+//var frame = Math.floor(player.frame / MOVE_ANIM_SPEED),
+//frameX, frameY, x, y, sprite;
+
+//// Tile coordinates
+//if(player.alive) {
+//frameX = frame % 3;
+//if(!player.moving) frameX = 1;
+//frameY = player.orient;     
+//} else {
+//frameY = Math.floor(frame/3) + 4;
+//frameX = frame % 3;
+//}
+
+//x = Math.round(player.x * SQUARE_SIZE) - CHAR_X;
+//y = Math.round(player.y * SQUARE_SIZE) - CHAR_Y;
+
+//sprite = this.charSprites[player.character];
+
+//// 8 is the last row in the spreadsheet.
+//if(frameY < 8) {
+//ctx.drawImage(sprite,
+//frameX * CHAR_WIDTH, 
+//frameY * CHAR_HEIGHT,
+//CHAR_WIDTH, CHAR_HEIGHT,
+//x, y,
+//CHAR_WIDTH, CHAR_HEIGHT);
+//}
+//}
+
+//drawBombs (bombs) {
+//var ctx = this.canvases[1].get(0).getContext('2d');
+//_.each(bombs, function (bomb) { this._drawBomb(bomb, ctx) }.bind(this));
+//}
+
+//_drawBomb (bomb, ctx) {
+//var frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
+//x = Math.floor(bomb.x) * SQUARE_SIZE,
+//y = Math.floor(bomb.y) * SQUARE_SIZE;
+
+//ctx.drawImage(  this.bombSprite, frame*SQUARE_SIZE, 0,
+//SQUARE_SIZE, SQUARE_SIZE, x, y,
+//SQUARE_SIZE, SQUARE_SIZE);
+//}
+
+//drawFlames (flames) {
+//var ctx = this.canvases[1].get(0).getContext('2d');
+//_.each(flames, function (flame) { this._drawFlame(flame, ctx) }.bind(this));
+//}
+
+//_drawFlame (flame, ctx) {
+//var frame = Math.floor(flame.frame / FLAME_ANIM_SPEED),
+//x = Math.floor(flame.x) * SQUARE_SIZE,
+//y = Math.floor(flame.y) * SQUARE_SIZE;
+
+//if (frame > 3 ) frame = 6 - frame;
+
+//ctx.drawImage(  this.flameSprite, frame*SQUARE_SIZE, 0,
+//SQUARE_SIZE, SQUARE_SIZE, x, y,
+//SQUARE_SIZE, SQUARE_SIZE);
+//}
+
+//}
+
+//module.exports = Canvas;
 
 
-},{"jquery":2,"lodash":3}],165:[function(require,module,exports){
+},{"./Map":168,"jquery":2,"lodash":3}],165:[function(require,module,exports){
 "use strict";
 
 var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } };
@@ -44946,15 +45131,16 @@ module.exports = Flame;
 
 
 },{}],166:[function(require,module,exports){
+/*jshint browserify: true */
 'use strict';
 
 var _ = require('lodash');
 
-var Map = require('./Map');
-var Player = require('./Player');
+var Canvas = require('./Canvas');
+var GameMap = require('./Map');
+var Player = require('./player');
 var Bomb = require('./Bomb');
 var Flame = require('./Flame');
-
 var Leaderboard = require('../components/leaderboard');
 
 function getTicks() {
@@ -44964,23 +45150,21 @@ function getTicks() {
 var Game = {
   init: function init(data) {
     this.lastTick = getTicks();
-    this.players = this._getPlayers(data.players);
+    this.players = this._getplayers(data.players);
     this.bombs = {};
     this.flames = {};
-    this.map = new Map(data.map);
-    this.canvas = this.map.canvas;
-    setTimeout((function () {
-      this.map.draw();
-    }).bind(this), 500);
-    // TODO: onLoadedSprite
+
+    GameMap.init(data.map);
+    Canvas.init(data.map.width, data.map.height);
     Leaderboard.load(this.players);
+
     this.update();
   },
 
-  playerJoin: function playerJoin(player) {
+  playerJoin: function playerJoin(plr) {
     console.log('player join');
-    var plr = new Player(player);
-    this.players[player.id] = plr;
+    var newPlayer = Player(plr);
+    this.players[plr.id] = newPlayer;
     Leaderboard.load(this.players);
   },
 
@@ -44988,40 +45172,45 @@ var Game = {
     console.log('player leave');
     if (_.isEmpty(this.players)) {
       return;
-    }delete this.players[id];
+    }
+    delete this.players[id];
     Leaderboard.load(this.players);
   },
 
-  playerSpawn: function playerSpawn(player) {
+  playerSpawn: function playerSpawn(plr) {
     console.log('player spawn');
-    var plr = this.players[player.id];
-    plr.update(player);
+    var player = this.players[plr.id];
+    player.update(plr);
   },
 
-  playerUpdate: function playerUpdate(player) {
-    var plr = this.players[player.id];
+  playerUpdate: function playerUpdate(plr) {
+    var player = this.players[plr.id];
     if (!plr) {
       console.log('Unkown update: ' + player.id);
       return;
     }
     console.log(player.x + ' ' + player.y);
-    plr.update(player);
+    player.update(plr);
   },
 
-  playerDie: function playerDie(player, suicide) {
+  playerDie: function playerDie(plr, suicide) {
     console.log('player died');
-    var plr = this.players[player.id];
-    if (!plr) {
+    var player = this.players[plr.id];
+    if (!player) {
       return;
-    }plr.die();
+    }
+    player.die();
 
-    if (suicide) this._playSound('suicide');else {
+    if (suicide) {
+      this._playSound('suicide');
+    } else {
       this._playSound('die');
     }
   },
 
-  playerScore: function playerScore(player) {
-    this.players[player.id].updateScore(player.score);
+  playerScore: function playerScore(plr) {
+    // TODO: CONFLATE
+    this.players[plr.id].updateScore(plr.score);
     Leaderboard.load(this.players);
   },
 
@@ -45050,10 +45239,10 @@ var Game = {
     }).bind(this));
   },
 
-  gameDone: function gameDone(player) {
+  gameDone: function gameDone(plr) {
     console.log('game over');
     this._playSound('win');
-    this.players[player.id].winner = true;
+    this.players[plr.id].winner = true;
     Leaderboard.load(this.players);
   },
 
@@ -45061,8 +45250,8 @@ var Game = {
     var now = getTicks(),
         delta = (now - this.lastTick) / 1000;
 
-    _.each(this.players, function (player) {
-      player.animationUpdate(delta);
+    _.each(this.players, function (plr) {
+      plr.animationUpdate(delta);
     });
 
     _.each(this.bombs, function (bomb) {
@@ -45073,21 +45262,19 @@ var Game = {
       flame.animationUpdate(delta);
     });
 
-    this.canvas.clear();
-    this.canvas.drawFlames(this.flames);
-    this.canvas.drawPlayers(this.players);
-    this.canvas.drawBombs(this.bombs);
+    Canvas.update(this.players, this.flames, this.bombs);
 
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
   },
 
-  _getPlayers: function _getPlayers(players) {
+  _getplayers: function _getplayers(players) {
     if (_.isEmpty(players)) {
       return players;
-    }var hash = {};
-    _.each(players, (function (player) {
-      hash[player.id] = new Player(player);
+    }
+    var hash = {};
+    _.each(players, (function (plr) {
+      hash[plr.id] = Player(plr);
     }).bind(this));
     return hash;
   },
@@ -45107,7 +45294,7 @@ var Game = {
 module.exports = Game;
 
 
-},{"../components/leaderboard":162,"./Bomb":163,"./Flame":165,"./Map":168,"./Player":169,"lodash":3}],167:[function(require,module,exports){
+},{"../components/leaderboard":162,"./Bomb":163,"./Canvas":164,"./Flame":165,"./Map":168,"./player":170,"lodash":3}],167:[function(require,module,exports){
 'use strict';
 
 var io = require('socket.io-client');
@@ -45196,106 +45383,53 @@ module.exports = GameManager;
 
 
 },{"./Game":166,"socket.io-client":159}],168:[function(require,module,exports){
-'use strict';
+/*jshint browserify: true */
+"use strict";
 
-var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+//var _ = require('lodash');
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var map = {
+  init: function init(opts) {
+    this.width = opts.width;
+    this.height = opts.height;
+    this.tiles = opts.tiles;
+  },
 
-var Canvas = require('./Canvas');
+  getTile: function getTile(xCoord, yCoord) {
+    return this.tiles[yCoord * this.width + xCoord];
+  },
 
-var Map = (function () {
-  function Map(data) {
-    _classCallCheck(this, Map);
-
-    this.x = data.x, this.y = data.y, this.width = data.width;
-    this.height = data.height;
-    this.map = data.map;
-    this.canvas = new Canvas(this);
+  setTile: function setTile(xCoord, yCoord, value) {
+    this.tiles[yCoord * this.width + xCoord] = value;
   }
 
-  _createClass(Map, [{
-    key: 'draw',
-    value: function draw() {
-      if (this.canvas) this.canvas.draw();
-    }
-  }, {
-    key: 'getTile',
-    value: function getTile(x, y) {
-      var index = y * this.width + x;
-      return this.map[index];
-    }
-  }, {
-    key: 'updateTile',
-    value: function updateTile(x, y, value) {
-      var index = y * this.width + x;
-      this.map = this.map.substr(0, index) + value + this.map.substr(index + 1);
-    }
-  }]);
+};
 
-  return Map;
-})();
+module.exports = map;
 
-module.exports = Map;
+//function Map (data) {
+//this.x = data.x,
+//this.y = data.y,
+//this.width = data.width;
+//this.height = data.height;
+//this.map = data.map;
+//this.canvas = new Canvas(this);
+//},
 
+//getTile: function (x, y) {
+//var index = (y * this.width) + x;
+//return this.map[index];
+//},
 
-},{"./Canvas":164}],169:[function(require,module,exports){
-'use strict';
+//updateTile: function (x, y, value) {
+//var index = (y * this.width) + x;
+//this.map = this.map.substr(0, index) + value + this.map.substr(index+1);
+//}
 
-var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var Player = (function () {
-  function Player(options) {
-    _classCallCheck(this, Player);
-
-    this.x = options.x;
-    this.y = options.y;
-    this.orient = options.orient;
-    this.id = options.id;
-    this.name = options.name;
-    this.score = options.score;
-    this.movement = options.movement;
-    this.moving = options.moving;
-    this.frame = 0;
-    this.alive = true;
-    this.character = 'betty';
-    this.winner = false;
-  }
-
-  _createClass(Player, [{
-    key: 'update',
-    value: function update(options) {
-      this.x = options.x, this.y = options.y, this.orient = options.orient;
-      this.moving = options.moving;
-      this.alive = options.alive;
-    }
-  }, {
-    key: 'updateScore',
-    value: function updateScore(score) {
-      this.score = score;
-    }
-  }, {
-    key: 'animationUpdate',
-    value: function animationUpdate(delta) {
-      this.frame += delta;
-    }
-  }, {
-    key: 'die',
-    value: function die() {
-      this.alive = false;
-      this.frame = 0;
-    }
-  }]);
-
-  return Player;
-})();
-
-module.exports = Player;
+//}
 
 
-},{}],170:[function(require,module,exports){
+},{}],169:[function(require,module,exports){
 'use strict';
 
 var $ = require('jquery');
@@ -45306,4 +45440,67 @@ $(document).ready(function () {
 });
 
 
-},{"./GameManager":167,"jquery":2}]},{},[170]);
+},{"./GameManager":167,"jquery":2}],170:[function(require,module,exports){
+/*jslint node: true */
+"use strict";
+
+var Player = {
+  alive: true,
+  winner: false,
+  frame: 0,
+
+  update: function update(options) {
+    this.x = options.x;
+    this.y = options.y;
+    this.direction = options.direction;
+    this.moving = options.moving;
+    this.alive = options.alive;
+  },
+
+  updateScore: function updateScore(score) {
+    this.score = score;
+  },
+
+  animationUpdate: function animationUpdate(delta) {
+    this.frame += delta;
+  },
+
+  getDirectionFrame: function getDirectionFrame() {
+    // down (0)
+    var frame = 0;
+
+    switch (this.direction) {
+      case "up":
+        frame = 1;
+        break;
+      case "right":
+        frame = 2;
+        break;
+      case "left":
+        frame = 3;
+        break;
+    }
+
+    return frame;
+  },
+
+  die: function die() {
+    this.alive = false;
+    this.frame = 0;
+  } };
+
+var playerFactory = function playerFactory(opts) {
+  var player = Object.create(Player);
+  player.id = opts.id;
+  player.character = opts.character;
+  player.name = opts.name;
+  player.update(opts);
+  player.score = opts.score;
+
+  return player;
+};
+
+module.exports = playerFactory;
+
+
+},{}]},{},[169]);
