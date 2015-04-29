@@ -2,17 +2,10 @@
 "use strict";
 
 let _ = require('lodash');
-//let util = require('util');
 
 let Tile  = require('./tile');
 let lib   = require('./lib/lib');
-
-// Constants
-const TILE_EMPTY = 0,
-      TILE_SOLID = 2,
-      TILE_BRICK = 1,
-      DEFAULT_WIDTH = 50,
-      DEFAULT_HEIGHT = 40;
+const Constants = require('./constants');
 
 let MapGenerator = {
   init (width, height) {
@@ -27,15 +20,15 @@ let MapGenerator = {
       _.times(this.width, function (xCoord) {
         // Wall test
         if(xCoord === 0 || xCoord === this.width - 1 || yCoord === 0 || yCoord === this.height - 1 ) {
-          this.setTile(xCoord, yCoord, TILE_SOLID);
+          this.setTile(xCoord, yCoord, Constants.TILE_SOLID);
         }
         // All even tiles are solid
         else if (xCoord % 2 === 0 && yCoord % 2 === 0){
-          this.setTile(xCoord, yCoord, TILE_SOLID);
+          this.setTile(xCoord, yCoord, Constants.TILE_SOLID);
         }
         // Randomize the bricks
         else if (lib.floor(_.random(9) === 0)) {
-          this.setTile(xCoord, yCoord, TILE_BRICK);
+          this.setTile(xCoord, yCoord, Constants.TILE_BRICK);
         }
       }.bind(this));
     }.bind(this));
@@ -58,8 +51,8 @@ let GameMap = {
   init (opts) {
     opts = opts || {};
 
-    this.width = opts.width || DEFAULT_WIDTH;
-    this.height = opts.height || DEFAULT_HEIGHT;
+    this.width = opts.width || Constants.MAP_WIDTH;
+    this.height = opts.height || Constants.MAP_HEIGHT;
 
     this.generator = mapGeneratorFactory(this.width, this.height);
     this.tiles = this.generator.generateMap();
@@ -90,7 +83,7 @@ let GameMap = {
 
   updateMap (tiles) {
     _.forEach(tiles, function (tile) {
-      this.setTile(tile.x, tile.y, TILE_EMPTY);
+      this.setTile(tile.x, tile.y, Constants.TILE_EMPTY);
     }.bind(this));
   },
 
@@ -107,7 +100,7 @@ let GameMap = {
     while(!valid) {
       x = lib.floor(_.random(0, this.width));
       y = lib.floor(_.random(0, this.height));
-      valid = this.getTile(x, y) === TILE_EMPTY;
+      valid = this.getTile(x, y) === Constants.TILE_EMPTY;
     } 
     return { x: x, y: y }; 
   },

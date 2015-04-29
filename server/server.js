@@ -1,12 +1,15 @@
 /*jslint node: true */
 "use strict";
 
-var express = require("express");
-var app = express();
-var server = require('http').Server(app);
-var io = require('socket.io').listen(server);
+let express = require("express");
+let app = express();
+let server = require('http').Server(app);
+let io = require('socket.io').listen(server);
+let lib = require('./game/lib/lib');
+let EventEmitter = require('events').EventEmitter;
+lib.extend(EventEmitter);
 
-var Server = require("./game/server");
+let Server = require("./game/server");
 
 Server.init(io);
 app.use(express.bodyParser());

@@ -5,10 +5,7 @@ let lib   = require('./lib');
 let _ = require('lodash');
 let B = require('baconjs').Bacon;
 
-// Constants
-const TILE_BRICK = 1,
-      TILE_SOLID = 2,
-      BOMB_STRENGTH = 4;
+const Constants = require('./../constants');
 
 let BombManager = {
 
@@ -58,12 +55,12 @@ let BombManager = {
 
   getDirtyTiles (tiles) {
     return _.filter(tiles, function (tile) {
-      return tile.value === TILE_BRICK;
+      return tile.value === Constants.TILE_BRICK;
     });
   },
 
   filterTiles (tiles) {
-    let paths = _.chunk(tiles, BOMB_STRENGTH+1),
+    let paths = _.chunk(tiles, Constants.BOMB_STRENGTH+1),
         result = [];
 
     // reverse so that we start from the blast zone.
@@ -72,8 +69,8 @@ let BombManager = {
     _.times(paths.length, function (i) {
       let brick = false;
       B.fromArray(paths[i])
-        .takeWhile(tile => !brick && tile.value !== TILE_SOLID) 
-        .doAction(tile => brick = tile.value === TILE_BRICK)
+        .takeWhile(tile => !brick && tile.value !== Constants.TILE_SOLID) 
+        .doAction(tile => brick = tile.value === Constants.TILE_BRICK)
         .onValue(tile => result.push(tile));
     });
 

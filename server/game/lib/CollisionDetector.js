@@ -2,8 +2,7 @@
 "use strict";
 
 let lib = require('./lib');
-
-const TILE_EMPTY = 0;
+const Constants = require('./../constants');
 
 let CollisionDetector = {
 
@@ -21,7 +20,7 @@ let CollisionDetector = {
   },
 
   mapCollision: function (x, y) {
-    return this.map.getTile(x, y) !== TILE_EMPTY;
+    return this.map.getTile(x, y) !== Constants.TILE_EMPTY;
   }, 
 
   bombCollision: function (x, y) {

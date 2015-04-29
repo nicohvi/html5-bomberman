@@ -1,8 +1,7 @@
 /*jslint node: true */
 "use strict";
 
-// Constants
-const MOVE_AMOUNT   = 0.15;
+const Constants = require('./constants');
 
 let Player = {
 
@@ -44,16 +43,16 @@ let Player = {
 
     switch(this.direction) {
       case 'left':
-        dx -= MOVE_AMOUNT;
+        dx -= Constants.MOVE_AMOUNT;
         break;
       case 'right':
-        dx += MOVE_AMOUNT;
+        dx += Constants.MOVE_AMOUNT;
         break;
       case 'up':
-        dy -= MOVE_AMOUNT;
+        dy -= Constants.MOVE_AMOUNT;
         break;
       case 'down':
-        dy += MOVE_AMOUNT;
+        dy += Constants.MOVE_AMOUNT;
         break;
     }
 

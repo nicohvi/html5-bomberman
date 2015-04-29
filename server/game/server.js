@@ -1,11 +1,8 @@
 /*jslint node: true */
 "use strict";
 
-//let util = require('util');
 let _ = require('lodash');
-
 let Game  = require('./game');
-
 let viewId    = 0,
     playerId  = 1;
 

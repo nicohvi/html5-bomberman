@@ -8,26 +8,13 @@ let EventEmitter = require('events').EventEmitter;
 
 let lib = require('./lib/lib');
 
-lib.extend(EventEmitter);
-
-// Constants
-const BOMB_STRENGTH = 4,
-      BOMB_TIMER = 3000,
-      FUSE_TIME = 500,
-      FLAME_TIME = 1000,
-      COOLDOWN_TIME = 1000,
-      SPAWNING_TIME = 6000,
-      PLAYER_GIRTH = 0.35,
-      WINNING_SCORE = 5,
-      MAP_WIDTH = 50,
-      MAP_HEIGHT = 40,
-      TILE_BRICK = 1;
-
 // Components
 let Player  = require('./player');
 let Bomb    = require('./bomb');
 let Flame   = require('./flame');
 let GameMap = require('./map');
+
+const Constants       = require('./constants');
 let CollisionDetector = require('./lib/CollisionDetector');
 let BombManager       = require('./lib/BombManager');
 
@@ -39,7 +26,7 @@ let Game = {
   init () {
     this.players = {};
     this.flames = {};
-    this.map = new GameMap({ width: MAP_WIDTH, height: MAP_HEIGHT });
+    this.map = new GameMap({ width: Constants.MAP_WIDTH, height: Constants.MAP_HEIGHT });
     this.bombManager = BombManager({ map: this.map});
     this.collisionDetector = CollisionDetector({ map: this.map, bombManager: this.bombManager});
     this.done = false;            
@@ -107,8 +94,8 @@ let Game = {
         playerY     = player.y,
         dx          = delta.dx,
         dy          = delta.dy,
-        newX = Math.floor(playerX + dx + this.direction(dx)*PLAYER_GIRTH),
-        newY = Math.floor(playerY + dy + this.direction(dy)*PLAYER_GIRTH);
+        newX = Math.floor(playerX + dx + this.direction(dx)*Constants.PLAYER_GIRTH),
+        newY = Math.floor(playerY + dy + this.direction(dy)*Constants.PLAYER_GIRTH);
 
     // x-axis
     if(!this.collisionDetector.canMove(newX, playerY)) {
@@ -133,7 +120,7 @@ let Game = {
     let opts = {
       id: bombId++,
       player: player,
-      strength: BOMB_STRENGTH,
+      strength: Constants.BOMB_STRENGTH,
       time: this.lastTick
     };
 
@@ -189,7 +176,7 @@ let Game = {
 
   checkWinners () {
     return _.find(this.players,function (plr) {
-      return plr.score >= WINNING_SCORE;
+      return plr.score >= Constants.WINNING_SCORE;
     });
   },
 
@@ -198,11 +185,11 @@ let Game = {
         activePlayers = playerStream.filter(plr => plr.alive);
 
     playerStream
-    .filter(plr => !plr.alive && (tick - plr.diedAt) > SPAWNING_TIME)
+    .filter(plr => !plr.alive && (tick - plr.diedAt) > Constants.SPAWNING_TIME)
     .onValue(function (plr) { this.spawnPlayer(plr); }.bind(this));
 
     activePlayers 
-    .filter(plr => plr.cooldown && (tick - plr.lastBomb) > COOLDOWN_TIME)
+    .filter(plr => plr.cooldown && (tick - plr.lastBomb) > Constants.COOLDOWN_TIME)
     .onValue(plr => plr.stopCooldown());
 
     activePlayers
@@ -233,8 +220,8 @@ let Game = {
     let bombStream  = lib.stream(this.bombManager.bombs),
        explodedBombs    = bombStream.filter(bomb => bomb.exploded),
        liveBombs        = bombStream.filter(bomb => !bomb.exploded),
-       bombsToActivate  = liveBombs.filter(bomb => !bomb.active && (tick - bomb.placedAt > FUSE_TIME)),
-       bombsToExplode   = liveBombs.filter(bomb => bomb.active && (tick - bomb.placedAt > BOMB_TIMER));
+       bombsToActivate  = liveBombs.filter(bomb => !bomb.active && (tick - bomb.placedAt > Constants.FUSE_TIME)),
+       bombsToExplode   = liveBombs.filter(bomb => bomb.active && (tick - bomb.placedAt > Constants.BOMB_TIMER));
 
     explodedBombs.onValue(function (bomb) { this.bombManager.removeBomb(bomb); }.bind(this));
     bombsToActivate.onValue(function (bomb) { this.bombManager.activateBomb(bomb); }.bind(this));
@@ -260,7 +247,7 @@ let Game = {
     let flames = [];
 
     lib.syncStream(this.flames)
-    .filter(flame => (tick - flame.spawnTime) > FLAME_TIME)
+    .filter(flame => (tick - flame.spawnTime) > Constants.FLAME_TIME)
     .doAction(function (flame) { delete this.flames[flame.id]; }.bind(this))
     .onValue(flame => flames.push(flame));
 
@@ -275,7 +262,7 @@ let Game = {
     this.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
     
     let tiles = this.bombManager.explodeBomb(bomb),
-        dirtyTiles = _.filter(tiles, tile => tile.value === TILE_BRICK);
+        dirtyTiles = _.filter(tiles, tile => tile.value === Constants.TILE_BRICK);
     
     this.emit('bomb-explode', { bomb: bomb });
     
@@ -312,10 +299,6 @@ let Game = {
     let prefix = "Logged from game.js: ";
     console.log(prefix + message);
   },
-
-//;
-
-// utility
 
   direction (x) {
     // x > 0  -> 1
