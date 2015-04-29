@@ -30,7 +30,7 @@ let Game = {
 
   playerJoin: function (plr) {
     console.log('player join');
-    var newPlayer = Player(plr);
+    let newPlayer = Player(plr);
     this.players[plr.id] = newPlayer;
     Leaderboard.load(this.players);
   },
@@ -44,24 +44,23 @@ let Game = {
 
   playerSpawn: function (plr) {
     console.log('player spawn');
-    var player = this.players[plr.id];
+    let player = this.players[plr.id];
     player.update(plr);
   },
   
   playerUpdate: function (plr) {
-    var player = this.players[plr.id];
+    let player = this.players[plr.id];
     if(!plr) {
       console.log('Unkown update: ' +player.id);
       return;
     }  
-    console.log(player.x + ' ' +player.y);
     player.update(plr); 
   },
 
-  playerDie: function (plr, suicide) {
-    console.log('player died');
-    var player = this.players[plr.id];
-    if(!player) { return; }
+  playerDie: function (plr, killer, suicide) {
+    const player = this.players[plr.id];
+    console.log(player.name+ ' killed by ' +killer.name);
+  
     player.die();
     
     if(suicide) {
@@ -72,30 +71,33 @@ let Game = {
   },
 
   playerScore: function (plr) {
-    // TODO: CONFLATE
     this.players[plr.id].updateScore(plr.score);
     Leaderboard.load(this.players);
   },
 
   bombPlace: function (bomb) {
+    console.log('place bomb');
     this.bombs[bomb.id] = new Bomb(bomb);
   },
 
-  bombExplode: function (data) {
+  bombExplode: function (bomb) {
     console.log('bomb explode');
-    delete this.bombs[data.bomb.id];
-    
-    this.canvas.dirtyTiles(data.dirtyTiles);
+    delete this.bombs[bomb.id];
   },
 
-  flameSpawn: function (flames) {
-    console.log('flames biatch');
+  mapUpdate: function (tiles) {
+    GameMap.update(tiles);
+    Canvas.addDirtyTiles(tiles);
+  },
+
+  flamesSpawn: function (flames) {
+    console.log('flames spawn');
     _.forEach(flames, function (flame) {
       this.flames[flame.id] = new Flame(flame);
     }.bind(this));
   },
 
-  flameDie: function (flames) {
+  flamesDie: function (flames) {
     console.log('flames done');
     _.forEach(flames, function (flame) {
       delete this.flames[flame.id];
@@ -110,7 +112,7 @@ let Game = {
   },
 
   update: function () {
-    var now   = getTicks(),
+    let now   = getTicks(),
         delta = (now - this.lastTick) / 1000;
 
     _.each(this.players, function (plr) {
@@ -125,7 +127,8 @@ let Game = {
       flame.animationUpdate(delta);
     });
 
-    Canvas.update(this.players, this.flames, this.bombs);
+    Canvas.update(this.players, this.bombs, this.flames);
+    Canvas.drawMap();
 
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
@@ -133,7 +136,7 @@ let Game = {
 
   _getplayers: function (players) {
     if(_.isEmpty(players)) { return players; }
-    var hash = {};
+    let hash = {};
     _.each(players, function (plr) {
       hash[plr.id] = Player(plr);
     }.bind(this));
@@ -147,7 +150,7 @@ let Game = {
   },
 
   _playSound: function (clip) {
-    var audio = new Audio('../../sounds/'+clip+'.wav');
+    let audio = new Audio('../../sounds/'+clip+'.wav');
     audio.play();
   }
 };

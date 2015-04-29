@@ -1,13 +1,11 @@
 /*jslint node: true */
 "use strict";
 
-let _ = require('lodash');
+let lib = require('./lib');
 
 const TILE_EMPTY = 0;
 
-let Player = require('../player');
-
-let collisionDetector = {
+let CollisionDetector = {
 
   collision: function (actor, tile) {
     let actorX = Math.floor(actor.x),
@@ -16,28 +14,11 @@ let collisionDetector = {
         tileY = Math.floor(tile.y);
 
     if(actorX === tileX && actorY === tileY) {
-      if(actor instanceof Player) {
         console.log(
-          'player ' +actor.name+ ' collides at '+actorX+ ', ' +actorY
-        );
-      } else {
-        console.log('collision at ' +actorX+ ', ' +actorY);
-      }
+          'player ' +actor.name+ ' collides at '+actorX+ ', ' +actorY);
       return tile;
     }
     return null;
-  },
-
-  playerCollides: function (player, tiles) {
-    return _.map(tiles, function (tile) {
-      return this.collision(player, tile);
-    }.bind(this));
-  },
-
-  firstCollision: function (player, tiles) {
-    return _.find(tiles, function (tile) {
-      return this.collision(player, tile);
-    }.bind(this));
   },
 
   mapCollision: function (x, y) {
@@ -49,14 +30,17 @@ let collisionDetector = {
   }, 
 
   canMove: function (x, y) {
-    return !this.mapCollision(x, y) && 
-           !this.bombCollision(x, y);
+    let xCoord = lib.floor(x), 
+        yCoord = lib.floor(y);
+
+    return !this.mapCollision(xCoord, yCoord) && 
+           !this.bombCollision(xCoord, yCoord);
   }
  
 };
 
 let collisionDetectorFactory = function (opts) {
-  let cd = Object.create(collisionDetector);
+  let cd = Object.create(CollisionDetector);
   cd.map = opts.map;
   cd.bombManager = opts.bombManager;
   return cd;

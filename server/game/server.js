@@ -28,8 +28,9 @@ var Server = {
   setupGameListeners: function () {
     this.game.onMany( 
       [ 'player-join', 'player-spawn', 'player-update', 
-        'player-die', 'place-bomb', 'bomb-explode', 
-        'flame-die', 'game-over', 'player-leave'],
+        'player-die', 'bomb-place', 'bomb-explode', 
+        'flames-spawn', 'map-update', 'player-score',
+        'flames-die', 'game-over', 'player-leave'],
       this.viewUpdate.bind(this));
   },
   

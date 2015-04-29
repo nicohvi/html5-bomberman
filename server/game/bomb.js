@@ -4,20 +4,24 @@
 let lib = require('./lib/lib');
 
 let Bomb = {
-  active: false,
-  exploded: false
+
+  init (opts) {
+    this.id  = opts.id;
+    this.x   = lib.floor(opts.player.x);
+    this.y   = lib.floor(opts.player.y);
+    this.strength = opts.strength;
+    this.playerId = opts.player.id;
+    this.placedAt = opts.time;
+    this.active = false;
+    this.exploded = false;
+
+    return this;
+  } 
 };
 
-let BombFactory = function (id, player, strength, time) {
+let BombFactory = function (opts) {
   var bomb = Object.create(Bomb);
-  bomb.id = id;
-  bomb.x = lib.floor(player.x);
-  bomb.y = lib.floor(player.y);
-  bomb.strength = strength;
-  bomb.playerId = player.id;
-  bomb.placedAt = time;
-
-  return bomb;
+  return bomb.init(opts);
 };
 
 module.exports = BombFactory;

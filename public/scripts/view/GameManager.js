@@ -1,7 +1,10 @@
-var io = require('socket.io-client');
-var Game = require('./Game');
+/*jshint browserify: true */
+"use strict";
 
-var GameManager = {
+let io = require('socket.io-client');
+let Game = require('./Game');
+
+let GameManager = {
 
   init: function () {
     this.socket = io.connect('/view'); 
@@ -18,8 +21,9 @@ var GameManager = {
     this.socket.on('player-score', this.onPlayerScore.bind(this));
     this.socket.on('bomb-place', this.onBombPlace.bind(this));
     this.socket.on('bomb-explode', this.onBombExplode.bind(this));
-    this.socket.on('flame-spawn', this.onFlameSpawn.bind(this));
-    this.socket.on('flame-die', this.onFlameDie.bind(this));
+    this.socket.on('map-update', this.onMapUpdate.bind(this));
+    this.socket.on('flames-spawn', this.onFlamesSpawn.bind(this));
+    this.socket.on('flames-die', this.onFlamesDie.bind(this));
     this.socket.on('game-done', this.onGameDone.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
@@ -45,7 +49,7 @@ var GameManager = {
   },
 
   onPlayerDie: function (data) {
-    Game.playerDie(data.player, data.suicide);
+    Game.playerDie(data.player, data.killer, data.suicide);
   },
 
   onPlayerScore: function (data) {
@@ -61,15 +65,19 @@ var GameManager = {
   },
 
   onBombExplode: function (data) {
-    Game.bombExplode(data.state);
+    Game.bombExplode(data.bomb);
   },
 
-  onFlameSpawn: function (data) {
-    Game.flameSpawn(data.flames);
+  onMapUpdate: function (data) {
+    Game.mapUpdate(data.tiles);
   },
 
-  onFlameDie: function (data) {
-    Game.flameDie(data.flames);
+  onFlamesSpawn: function (data) {
+    Game.flamesSpawn(data.flames);
+  },
+
+  onFlamesDie: function (data) {
+    Game.flamesDie(data.flames);
   },
 
   onGameDone: function (data) {

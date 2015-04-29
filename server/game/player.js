@@ -1,8 +1,6 @@
 /*jslint node: true */
 "use strict";
 
-//let util = require('util');
-
 // Constants
 const MOVE_AMOUNT   = 0.15;
 
@@ -74,8 +72,8 @@ let Player = {
     this.diedAt = time;
   },
 
-  update (data) {
-    this.score = data.score;
+  updateScore (diff) {
+    this.score += diff;
   },
 
   setCooldown (time) {

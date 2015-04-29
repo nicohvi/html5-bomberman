@@ -4,7 +4,7 @@
 let $ = require('jquery');
 let _ = require('lodash');
 
-let Map = require('./Map');
+let GameMap = require('./Map');
 
 let SpritesToLoad = 7;
 
@@ -79,7 +79,7 @@ let canvas = {
     let frame = Math.floor(bomb.frame / BOMB_ANIM_SPEED) % 3,
             x = Math.floor(bomb.x) * SQUARE_SIZE,
             y = Math.floor(bomb.y) * SQUARE_SIZE;
-
+  
     this.charCanvas.drawImage(  
       this.bombSprite, frame*SQUARE_SIZE, 0,
       SQUARE_SIZE, SQUARE_SIZE, x, y,
@@ -106,7 +106,7 @@ let canvas = {
     
     // Draw dirty zones
     _.forEach(this.dirtyTiles, function (dirtyTile) {
-      var newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
+      let newTile = GameMap.getTile(dirtyTile.x, dirtyTile.y);
       this.drawTile(dirtyTile.x, dirtyTile.y, newTile);
     }.bind(this));
       //for(var j = 0; j < zone.width; j++) {
@@ -125,9 +125,9 @@ let canvas = {
   
   // full repaint
   redrawMap () {
-    _.times(Map.height, function (y) {
-      _.times(Map.width, function (x) {
-        let tile = Map.getTile(x, y);
+    _.times(GameMap.height, function (y) {
+      _.times(GameMap.width, function (x) {
+        let tile = GameMap.getTile(x, y);
         this.drawTile(x, y, tile);
       }.bind(this));
     }.bind(this));
@@ -145,7 +145,6 @@ let canvas = {
 
   addDirtyTiles (tiles) {
     _.forEach(tiles, function (tile) {
-      console.log('dirty tile: ' +tile.x+ ', ' +tile.y);
       var x = Math.floor(tile.x),
           y = Math.floor(tile.y);
       
@@ -257,7 +256,7 @@ module.exports = canvas;
       //this.map.updateTile(x, y, "0");
       //this.addDirtyZone(x, y, 1, 1);
     //}.bind(this));
-    //this.drawMap();
+    //this.drawGameMap();
   //}
 
   //addDirtyZone (x, y, width, height) {
@@ -289,7 +288,7 @@ module.exports = canvas;
   //}
 
 
-  //drawMap () {
+  //drawGameMap () {
     //var mapCanvas   = this.canvases[0].get(0),
         //ctx         = mapCanvas.getContext('2d'),
         //tileSprite  = this.tileSprite,

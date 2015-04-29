@@ -11,15 +11,17 @@ let lib = require('./lib/lib');
 lib.extend(EventEmitter);
 
 // Constants
-const BOMB_TIMER = 3000,
-      BOMB_STRENGTH = 4,
+const BOMB_STRENGTH = 4,
+      BOMB_TIMER = 3000,
+      FUSE_TIME = 500,
+      FLAME_TIME = 1000,
       COOLDOWN_TIME = 1000,
       SPAWNING_TIME = 6000,
-      FUSE_TIME = 500,
       PLAYER_GIRTH = 0.35,
       WINNING_SCORE = 5,
       MAP_WIDTH = 50,
-      MAP_HEIGHT = 40;
+      MAP_HEIGHT = 40,
+      TILE_BRICK = 1;
 
 // Components
 let Player  = require('./player');
@@ -36,10 +38,10 @@ let Game = {
 
   init () {
     this.players = {};
+    this.flames = {};
     this.map = new GameMap({ width: MAP_WIDTH, height: MAP_HEIGHT });
-    this.bombManager = BombManager(this.map);
+    this.bombManager = BombManager({ map: this.map});
     this.collisionDetector = CollisionDetector({ map: this.map, bombManager: this.bombManager});
-
     this.done = false;            
 
     this.update.call(this);
@@ -88,6 +90,16 @@ let Game = {
     this.emit('player-update', { player: player.move(data.dir) });
   },
 
+  killPlayer (player, flame) {
+    const killer = this.players[flame.playerId],
+          suicide = killer === player;
+
+    this.updateScore(player, killer, suicide);
+    player.die(this.lastTick);
+    // TODO: Score
+    this.emit('player-die', { player: player, killer: killer, suicide: suicide });
+  },
+
   attemptMove (player, delta) {
     let playerX     = player.x,
         playerY     = player.y,
@@ -116,46 +128,26 @@ let Game = {
       return;
     }
 
-    let bomb = Bomb(bombId++, player, BOMB_STRENGTH, this.lastTick);
+    let opts = {
+      id: bombId++,
+      player: player,
+      strength: BOMB_STRENGTH,
+      time: this.lastTick
+    };
+
+    let bomb = Bomb(opts);
 
     player.setCooldown(this.lastTick);
     this.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
 
     this.bombManager.addBomb(bomb);
-    this.emit('place-bomb', bomb);
+    this.emit('bomb-place', { bomb: bomb });
   },
 
   gameOver (winner) {  
     this.done = true;
     this.winner = winner;
-    this.emit('game-done', winner);
-  },
-
-  scoreUpdate (player, score) {
-    player.updateScore(score);
-    this.emit('player-score', { player: player});
-  },
-
-  explodeBomb (bomb) {  
-    // Bomb has already been exploded through the magic
-    // of chaining.
-    if(typeof(bomb) === 'undefined' || bomb.exploded) {
-      return;
-    }
-
-    // returns dirty tiles from explosion
-    let dirtyTiles = this.bombManager.explodeBomb(bomb);
-
-    this.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
-
-    bomb.exploded = true;
-    this.map.updateMap(dirtyTiles);
-    this.emit(
-      'bomb-explode', 
-      { bomb: bomb, dirtyTiles: dirtyTiles }
-    );
-    
-    //this.chainBombs(tiles, bomb.id);
+    this.emit('game-done', { player: winner});
   },
 
   update () {
@@ -166,8 +158,21 @@ let Game = {
     }
 
     this.updatePlayers(tick);
-    //this.updateBombs();
-    this.lasTick = tick;
+    this.updateBombs(tick);
+    this.updateFlames(tick);
+
+    this.lastTick = tick;
+  },
+
+  updateScore (player, killer, suicide) {
+    let update = player;
+    if(suicide) {
+      player.updateScore(-1);
+    } else {
+      killer.updateScore(1);
+      update = killer;
+    }
+    this.emit('player-score', { player: killer });
   },
 
   updatePlayers (tick) {
@@ -187,12 +192,31 @@ let Game = {
   },
 
   updatePlayerMovement (tick) {
-    B.fromBinder(function (sink) {
-      _.forEach(this.players, function (plr) {
-        return sink(plr);
+    let playerStream  = lib.stream(this.players),
+        activePlayers = playerStream.filter(plr => plr.alive);
+
+    playerStream
+    .filter(plr => !plr.alive && (tick - plr.diedAt) > SPAWNING_TIME)
+    .onValue(function (plr) { this.spawnPlayer(plr); }.bind(this));
+
+    activePlayers 
+    .filter(plr => plr.cooldown && (tick - plr.lastBomb) > COOLDOWN_TIME)
+    .onValue(plr => plr.stopCooldown());
+
+    activePlayers
+    .onValue(function(plr) {
+      lib.syncStream(this.flames)
+      .filter(function (flame) {
+        return this.collisionDetector.collision(plr, flame);
+      }.bind(this))
+      .onValue(function (flame) {
+        this.killPlayer(plr, flame);
       }.bind(this));
-    }.bind(this))
-    .filter(plr => plr.alive && plr.moving)
+    }.bind(this));
+
+
+    activePlayers
+    .filter(plr => plr.moving)
     .map(function (plr) {
       let delta = plr.getAttemptedMove();
       return this.attemptMove(plr, delta);
@@ -200,60 +224,74 @@ let Game = {
     .onValue(function (plr) { 
       this.emit('player-update', { player: plr });
     }.bind(this));
+
   },
 
-  //updateBombs (tick) {
-    //this.explodeBombs(tick);
-    //R.pipe(
-    //R.filter(function (bomb) { return bomb.exploded; }),
-    //R.forEach(function (bomb) { this.bombManager.removeBomb(bomb); }.bind(this))
-    //)(this.players);
-  //}, 
+  updateBombs (tick) {
+    let bombStream  = lib.stream(this.bombManager.bombs),
+       explodedBombs    = bombStream.filter(bomb => bomb.exploded),
+       liveBombs        = bombStream.filter(bomb => !bomb.exploded),
+       bombsToActivate  = liveBombs.filter(bomb => !bomb.active && (tick - bomb.placedAt > FUSE_TIME)),
+       bombsToExplode   = liveBombs.filter(bomb => bomb.active && (tick - bomb.placedAt > BOMB_TIMER));
 
-  //explodeBombs (tick) {
-    //let liveBombs = R.filter(function (bomb) { return !bomb.exploded; })(this.bombManager.bombs);
+    explodedBombs.onValue(function (bomb) { this.bombManager.removeBomb(bomb); }.bind(this));
+    bombsToActivate.onValue(function (bomb) { this.bombManager.activateBomb(bomb); }.bind(this));
+    bombsToExplode.onValue(function (bomb) { this.explodeBomb(bomb); }.bind(this));
+  },
 
-      //R.pipe(
-      //R.filter(function (bomb) {
-        //return !bomb.active && (tick - bomb.placedAt > FUSE_TIME);
-      //}),
-      //R.forEach(function (bomb) {
-        //this.bombManager.activateBomb(bomb);
-      //}.bind(this))
-      //)(liveBombs);
+  updateFlames (tick) {
+    let flames = [];
 
-      //R.pipe(
-      //R.filter(function (bomb) {
-        //return bomb.active && (tick - bomb.placedAt > BOMB_TIMER);
-      //}),
-      //R.forEach(function (bomb) {
-        //this.bombExplode(bomb);
-      //}.bind(this))
-      //)(liveBombs);
-  //},
+    lib.syncStream(this.flames)
+    .filter(flame => (tick - flame.spawnTime) > FLAME_TIME)
+    .doAction(function (flame) { delete this.flames[flame.id]; }.bind(this))
+    .onValue(flame => flames.push(flame));
+
+    if(!_.isEmpty(flames)) {
+      this.emit('flames-die', { flames: flames });
+    }
+  },
+
+  explodeBomb (bomb) {
+    this.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
+    
+    let tiles = this.bombManager.explodeBomb(bomb),
+        dirtyTiles = _.filter(tiles, tile => tile.value === TILE_BRICK);
+    
+    this.emit('bomb-explode', { bomb: bomb });
+    
+    this.spawnFlames(tiles, bomb.playerId);
+    this.updateMap(dirtyTiles);
+  },
+
+  spawnFlames (tiles, playerId) {
+    let flames = [],
+        now = this.lastTick;
+
+    B.fromArray(tiles)
+      .map(tile => Flame({
+        x:  tile.x, 
+        y:  tile.y, 
+        id: flameId++, 
+        playerId: playerId,   
+        time: now}))
+      .doAction(function (flame) { 
+        this.flames[flame.id] = flame;
+      }.bind(this))
+      .onValue(flame => flames.push(flame));
+
+    this.emit('flames-spawn', { flames: flames});    
+  },
+
+  updateMap (tiles) {
+    this.map.updateMap(tiles);
+    this.emit('map-update', { tiles: tiles });
+  },
 
   log (message) {
     let prefix = "Logged from game.js: ";
     console.log(prefix + message);
   },
-
-//Game.prototype.spawnFlames = function (tiles, playerId) {
-  //let newFlames = [];
-  //_.forEach(tiles, function (tile) {
-    //let flame = new Flame(tile.x, tile.y, flameId++, playerId); 
-    //this.flames[flame.id] = flame;
-    //newFlames.push(flame);
-  //}.bind(this));
-  //this.emit('flame-spawn', newFlames);
-  ////setTimeout(this.killFlames.bind(this, newFlames), 1000);
-//};
-
-//Game.prototype.killFlames = function (flames) {
-  //_.forEach(flames, function (flame) {
-    //delete this.flames[flame.id];
-  //}.bind(this));
-  //this.emit('flame-die', flames);
-//};
 
 //Game.prototype.chainBombs = function (tiles, bombId) {
   //let bombs = [];

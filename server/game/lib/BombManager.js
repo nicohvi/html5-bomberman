@@ -1,15 +1,22 @@
 /*jslint node: true */
 "use strict";
 
-let util = require('util');
+let lib   = require('./lib');
+let _ = require('lodash');
+let B = require('baconjs').Bacon;
 
 // Constants
-let TILE_BRICK = 1,
-    TILE_SOLID = 2;
-
-let _ = require('lodash');
+const TILE_BRICK = 1,
+      TILE_SOLID = 2,
+      BOMB_STRENGTH = 4;
 
 let BombManager = {
+
+  init (opts) {
+    this.map = opts.map;
+    this.bombs = {};
+    return this;
+  },
    
   addBomb (bomb) {
     this.bombs[bomb.id] = bomb;
@@ -19,39 +26,34 @@ let BombManager = {
     delete this.bombs[bomb.id];
   },
 
-  activateBomb (bomb) {
-    this.bombs[bomb.id].active = true;
-  },
- 
-  hasBomb (x, y) {
-    return !_.isEmpty(_.filter(this.bombs, function (bomb) {
-      return bomb.x === x && bomb.y === y;
-    }));
-  },
-  
   getBomb (id) {
     return this.bombs[id];
   },
 
-   explodeBomb (id) {
-    let bomb = this.bombs[id];
+  hasBomb (x, y) {
+    return !_.isEmpty(_.filter(this.bombs, function (bomb) {
+      return bomb.x === x && bomb.y === y && bomb.active;
+    }));
+  },
+
+  activateBomb (bomb) {
+    this.bombs[bomb.id].active = true;
+  },
+
+  explodeBomb (bomb) {
     if (typeof(bomb) === 'undefined' || bomb.exploded) { 
       return; 
     }
-    
-    let tiles = this.getTiles(bomb);
-    this.dangerTiles = _.flatten(this.dangerTiles.push(tiles));
-    return this.getDirtyTiles(tiles);
+    bomb.exploded = true;
+    return this.getTiles(bomb);
   },
-  
+
   getTiles (bomb) {
-    let horizontalTiles = this.map.getRowTiles(_.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
-    verticalTiles = this.map.getColumnTiles(_.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
+    let horizontalTiles = this.map.getRowTiles(lib.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
+    verticalTiles = this.map.getColumnTiles(lib.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
 
-    horizontalTiles = this._filterTiles(horizontalTiles, bomb);
-    verticalTiles   = this._filterTiles(verticalTiles, bomb);
-
-    return horizontalTiles.concat(verticalTiles);
+    let tiles = this.filterTiles(horizontalTiles).concat(this.filterTiles(verticalTiles));
+    return tiles; 
   },
 
   getDirtyTiles (tiles) {
@@ -60,31 +62,29 @@ let BombManager = {
     });
   },
 
-  filterTiles (tiles, bomb) {
-    let paths = _.chunck(tiles, bomb.strength+1);
-    _(paths[0]).reverse();
-   
-    let test = _.times(2, function (i) {
-      return _.takeWhile(paths[i], function (tile, j) {
-        return  tile.value !== TILE_SOLID ||
-                ( typeof(paths[i][j-1]) !== 'undefined' &&
-                paths[i][j-1].value !== TILE_BRICK );
-      });
+  filterTiles (tiles) {
+    let paths = _.chunk(tiles, BOMB_STRENGTH+1),
+        result = [];
+
+    // reverse so that we start from the blast zone.
+    _(paths[0]).reverse().value();
+    
+    _.times(paths.length, function (i) {
+      let brick = false;
+      B.fromArray(paths[i])
+        .takeWhile(tile => !brick && tile.value !== TILE_SOLID) 
+        .doAction(tile => brick = tile.value === TILE_BRICK)
+        .onValue(tile => result.push(tile));
     });
-    // TODO
-    console.log(util.inspect(test));
-    return test;
+
+    return result;
   }
 
 };
 
 let bombManagerFactory = function (opts) {
-  return _.assign(Object.create(BombManager), {
-    map: opts.map,
-    bombs: {},
-    flames: {},
-    dangerTiles: []
-  });
+  let bombManager = Object.create(BombManager);
+  return bombManager.init(opts);
 };
 
 module.exports = bombManagerFactory;

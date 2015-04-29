@@ -57,20 +57,22 @@ let GameMap = function (opts) {
 
 GameMap.prototype.getTile = function (xCoord, yCoord) {
   if(this.invalidValues(xCoord, yCoord)) { return -1; }
+  
   let x = lib.floor(xCoord),
       y = lib.floor(yCoord);
+
   return this.tiles[y * this.width + x];
 };
 
-GameMap.prototype.getRowTiles = function (range, column) {
-  return _.forEach(range, function (xCoord) { 
-    return new Tile(xCoord, column, this.getTile(column * this.width + xCoord));
+GameMap.prototype.getRowTiles = function (xRange, yCoord) {
+  return _.map(xRange, function (xCoord) { 
+    return Tile(xCoord, yCoord, this.getTile(xCoord, yCoord));
   }.bind(this));
 };
 
-GameMap.prototype.getColumnTiles = function (range, row) {
-  return _.forEach(range, function (yCoord) { 
-    return new Tile(row, yCoord, this.getTile(yCoord* this.width + row));
+GameMap.prototype.getColumnTiles = function (yRange, xCoord) {
+  return _.map(yRange, function (yCoord) { 
+    return Tile(xCoord, yCoord, this.getTile(xCoord, yCoord));
   }.bind(this));
 };
 
@@ -99,7 +101,7 @@ GameMap.prototype.getValidSpawnLocation = function() {
 };
 
 GameMap.prototype.invalidValues = function (x, y) {
-  return (this.width <= x < 0) || (this.height <= y < 0);
+  return (this.width <= x && x <= 0) || (this.height <= y && y <= 0);
 };
 
 module.exports = GameMap;

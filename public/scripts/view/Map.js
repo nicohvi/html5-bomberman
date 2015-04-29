@@ -16,6 +16,10 @@ let map = {
 
   setTile (xCoord, yCoord, value) {
     this.tiles[yCoord * this.width + xCoord] = value;
+  },
+
+  update (tiles) {
+    tiles.forEach(tile => this.setTile(tile.x, tile.y, 0));
   }
 
 };

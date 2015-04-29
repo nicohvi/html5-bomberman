@@ -44705,7 +44705,7 @@ module.exports = Bomb;
 var $ = require('jquery');
 var _ = require('lodash');
 
-var Map = require('./Map');
+var GameMap = require('./Map');
 
 var SpritesToLoad = 7;
 
@@ -44810,7 +44810,7 @@ var canvas = {
 
     // Draw dirty zones
     _.forEach(this.dirtyTiles, (function (dirtyTile) {
-      var newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
+      var newTile = GameMap.getTile(dirtyTile.x, dirtyTile.y);
       this.drawTile(dirtyTile.x, dirtyTile.y, newTile);
     }).bind(this));
     //for(var j = 0; j < zone.width; j++) {
@@ -44828,9 +44828,9 @@ var canvas = {
 
   // full repaint
   redrawMap: function redrawMap() {
-    _.times(Map.height, (function (y) {
-      _.times(Map.width, (function (x) {
-        var tile = Map.getTile(x, y);
+    _.times(GameMap.height, (function (y) {
+      _.times(GameMap.width, (function (x) {
+        var tile = GameMap.getTile(x, y);
         this.drawTile(x, y, tile);
       }).bind(this));
     }).bind(this));
@@ -44844,7 +44844,6 @@ var canvas = {
 
   addDirtyTiles: function addDirtyTiles(tiles) {
     _.forEach(tiles, (function (tile) {
-      console.log('dirty tile: ' + tile.x + ', ' + tile.y);
       var x = Math.floor(tile.x),
           y = Math.floor(tile.y);
 
@@ -44955,7 +44954,7 @@ module.exports = canvas;
 //this.map.updateTile(x, y, "0");
 //this.addDirtyZone(x, y, 1, 1);
 //}.bind(this));
-//this.drawMap();
+//this.drawGameMap();
 //}
 
 //addDirtyZone (x, y, width, height) {
@@ -44986,7 +44985,7 @@ module.exports = canvas;
 //return $('<img src="'+path+'" />').get(0);
 //}
 
-//drawMap () {
+//drawGameMap () {
 //var mapCanvas   = this.canvases[0].get(0),
 //ctx         = mapCanvas.getContext('2d'),
 //tileSprite  = this.tileSprite,
@@ -45189,16 +45188,13 @@ var Game = {
       console.log('Unkown update: ' + player.id);
       return;
     }
-    console.log(player.x + ' ' + player.y);
     player.update(plr);
   },
 
-  playerDie: function playerDie(plr, suicide) {
-    console.log('player died');
+  playerDie: function playerDie(plr, killer, suicide) {
     var player = this.players[plr.id];
-    if (!player) {
-      return;
-    }
+    console.log(player.name + ' killed by ' + killer.name);
+
     player.die();
 
     if (suicide) {
@@ -45209,30 +45205,33 @@ var Game = {
   },
 
   playerScore: function playerScore(plr) {
-    // TODO: CONFLATE
     this.players[plr.id].updateScore(plr.score);
     Leaderboard.load(this.players);
   },
 
   bombPlace: function bombPlace(bomb) {
+    console.log('place bomb');
     this.bombs[bomb.id] = new Bomb(bomb);
   },
 
-  bombExplode: function bombExplode(data) {
+  bombExplode: function bombExplode(bomb) {
     console.log('bomb explode');
-    delete this.bombs[data.bomb.id];
-
-    this.canvas.dirtyTiles(data.dirtyTiles);
+    delete this.bombs[bomb.id];
   },
 
-  flameSpawn: function flameSpawn(flames) {
-    console.log('flames biatch');
+  mapUpdate: function mapUpdate(tiles) {
+    GameMap.update(tiles);
+    Canvas.addDirtyTiles(tiles);
+  },
+
+  flamesSpawn: function flamesSpawn(flames) {
+    console.log('flames spawn');
     _.forEach(flames, (function (flame) {
       this.flames[flame.id] = new Flame(flame);
     }).bind(this));
   },
 
-  flameDie: function flameDie(flames) {
+  flamesDie: function flamesDie(flames) {
     console.log('flames done');
     _.forEach(flames, (function (flame) {
       delete this.flames[flame.id];
@@ -45262,7 +45261,8 @@ var Game = {
       flame.animationUpdate(delta);
     });
 
-    Canvas.update(this.players, this.flames, this.bombs);
+    Canvas.update(this.players, this.bombs, this.flames);
+    Canvas.drawMap();
 
     this.lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
@@ -45295,6 +45295,7 @@ module.exports = Game;
 
 
 },{"../components/leaderboard":162,"./Bomb":163,"./Canvas":164,"./Flame":165,"./Map":168,"./player":170,"lodash":3}],167:[function(require,module,exports){
+/*jshint browserify: true */
 'use strict';
 
 var io = require('socket.io-client');
@@ -45317,8 +45318,9 @@ var GameManager = {
     this.socket.on('player-score', this.onPlayerScore.bind(this));
     this.socket.on('bomb-place', this.onBombPlace.bind(this));
     this.socket.on('bomb-explode', this.onBombExplode.bind(this));
-    this.socket.on('flame-spawn', this.onFlameSpawn.bind(this));
-    this.socket.on('flame-die', this.onFlameDie.bind(this));
+    this.socket.on('map-update', this.onMapUpdate.bind(this));
+    this.socket.on('flames-spawn', this.onFlamesSpawn.bind(this));
+    this.socket.on('flames-die', this.onFlamesDie.bind(this));
     this.socket.on('game-done', this.onGameDone.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
   },
@@ -45344,7 +45346,7 @@ var GameManager = {
   },
 
   onPlayerDie: function onPlayerDie(data) {
-    Game.playerDie(data.player, data.suicide);
+    Game.playerDie(data.player, data.killer, data.suicide);
   },
 
   onPlayerScore: function onPlayerScore(data) {
@@ -45360,15 +45362,19 @@ var GameManager = {
   },
 
   onBombExplode: function onBombExplode(data) {
-    Game.bombExplode(data.state);
+    Game.bombExplode(data.bomb);
   },
 
-  onFlameSpawn: function onFlameSpawn(data) {
-    Game.flameSpawn(data.flames);
+  onMapUpdate: function onMapUpdate(data) {
+    Game.mapUpdate(data.tiles);
   },
 
-  onFlameDie: function onFlameDie(data) {
-    Game.flameDie(data.flames);
+  onFlamesSpawn: function onFlamesSpawn(data) {
+    Game.flamesSpawn(data.flames);
+  },
+
+  onFlamesDie: function onFlamesDie(data) {
+    Game.flamesDie(data.flames);
   },
 
   onGameDone: function onGameDone(data) {
@@ -45401,6 +45407,14 @@ var map = {
 
   setTile: function setTile(xCoord, yCoord, value) {
     this.tiles[yCoord * this.width + xCoord] = value;
+  },
+
+  update: function update(tiles) {
+    var _this = this;
+
+    tiles.forEach(function (tile) {
+      return _this.setTile(tile.x, tile.y, 0);
+    });
   }
 
 };

@@ -2,13 +2,50 @@
 "use strict";
 
 var _ = require ('lodash');
+let B = require('baconjs').Bacon;
 
 var lib = {
 
-  coordinates: function (obj) {
-    return { x: lib.floor(obj.x), y: lib.floor(obj.y) };
-  },
+  stream: function (collection) {
+    return B.fromBinder(function (sink) {
+      _.forEach(collection, function (item) {
+        return sink(new B.Next(function() {
+            return item; 
+          }));
+      });
 
+      return function () { };
+    // Delay makes the stream source async, which will be 
+    // default in bacon 0.8
+    }).delay(0);
+  },  
+
+  syncStream: function (collection) {
+    return B.fromBinder(function (sink) {
+      _.forEach(collection, function (item) {
+        return sink(new B.Next(function() {
+            return item; 
+          }));
+      });
+
+      return function () { };
+    // Delay makes the stream source async, which will be 
+    // default in bacon 0.8
+    });
+  },  
+
+  range: function (start, end) {
+    // +1 to include the end;
+    let length = Math.max(Math.ceil(end-start)) +1;
+    let range = Array(length);
+
+    for(var i = 0; i < length; i++, start++) {
+      range[i] = start;
+    }
+
+    return range;
+  },
+ 
   floor: function (x) { return Math.floor(x); },
 
   extend: function (EventEmitter) {

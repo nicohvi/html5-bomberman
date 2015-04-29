@@ -1,11 +1,21 @@
 /*jslint node: true */
 "use strict";
 
-var Flame = function (x, y, id, playerId) {
-  this.x = x;
-  this.y = y;
-  this.id = id;
-  this.playerId = playerId;
+let Flame = {
+  init (opts) {
+    this.x = opts.x;
+    this.y = opts.y;
+    this.id = opts.id;
+    this.playerId = opts.playerId;
+    this.spawnTime = opts.time;
+    
+    return this;
+  }
 };
 
-module.exports = Flame;
+let flameFactory = function (opts) {
+  let flame = Object.create(Flame);
+  return flame.init(opts); 
+};
+
+module.exports = flameFactory;
