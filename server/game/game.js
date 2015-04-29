@@ -47,6 +47,8 @@ let Game = {
     this.update.call(this);
     // 60 Hz: 1/60 = 0.167 ~ 17
     setInterval(this.update.bind(this), 17);
+
+    return this;
   },
 
   state () { 
@@ -239,6 +241,21 @@ let Game = {
     bombsToExplode.onValue(function (bomb) { this.explodeBomb(bomb); }.bind(this));
   },
 
+  chainBombs (tiles, bombId) {
+    const bombStream = lib.syncStream(this.bombManager.bombs);
+    
+    bombStream
+    .filter(bomb => bomb.id !== bombId)
+    .filter(function (bomb) { return this.tileCollision(bomb, tiles); }.bind(this))
+    .onValue(this.explodeBomb.bind(this));
+  },
+
+  tileCollision (bomb, tiles) {
+    return !_.isEmpty(_.filter(tiles, function (tile) { 
+      return this.collisionDetector.collision(bomb, tile) !== null;
+    }.bind(this)));
+  },
+
   updateFlames (tick) {
     let flames = [];
 
@@ -253,6 +270,8 @@ let Game = {
   },
 
   explodeBomb (bomb) {
+    if(bomb.exploded) { return; }
+
     this.log('bomb ' +bomb.id+ ' exploding at: ' +bomb.x+ ", " +bomb.y);
     
     let tiles = this.bombManager.explodeBomb(bomb),
@@ -262,6 +281,7 @@ let Game = {
     
     this.spawnFlames(tiles, bomb.playerId);
     this.updateMap(dirtyTiles);
+    this.chainBombs(tiles, bomb.id);
   },
 
   spawnFlames (tiles, playerId) {
@@ -293,22 +313,6 @@ let Game = {
     console.log(prefix + message);
   },
 
-//Game.prototype.chainBombs = function (tiles, bombId) {
-  //let bombs = [];
-  //_.forEach(this.bombs, function (bomb) {
-    //_.forEach(tiles, function (tile) {
-      //if(CollisionDetector.collision(bomb, tile) && bomb.id !== bombId) {
-        //bombs.push(bomb);
-      //}
-    //}.bind(this));
-  //}.bind(this)); 
-
-  //_.forEach(bombs, function(bomb) { 
-      //this.log('should be chained: ' +util.inspect(bomb));
-      //this.bombExplode(bomb);
-  //}.bind(this));
-//};
-
 //;
 
 // utility
@@ -326,11 +330,9 @@ let Game = {
 };
 
 let gameFactory = function () {
-  let game = Object.create(_.assign({}, EventEmitter.prototype, Game));
   // extend the game with the eventemitter prototype
-  game.init();
-
-  return game;
+  let game = Object.create(_.assign({}, EventEmitter.prototype, Game));
+  return game.init();
 };
 
 module.exports = gameFactory;

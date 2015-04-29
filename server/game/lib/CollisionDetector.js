@@ -14,8 +14,7 @@ let CollisionDetector = {
         tileY = Math.floor(tile.y);
 
     if(actorX === tileX && actorY === tileY) {
-        console.log(
-          'player ' +actor.name+ ' collides at '+actorX+ ', ' +actorY);
+        console.log('collision at: ' +actorX+ ', ' +actorY);
       return tile;
     }
     return null;
