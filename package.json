@@ -5,8 +5,7 @@
     "iojs": "1.7.x"
   },
   "scripts": {
-    "start": "node --harmony_arrow_functions --harmony_object_literals server.js",
-    "postinstall": "browserify scripts/vew/apps.js -t babelify -t reactify -o scripts/view/bundle.js -v" 
+    "start": "node --harmony_arrow_functions --harmony_object_literals server.js"
   },
   "dependencies": {
     "express": "~3.3.8",
