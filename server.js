@@ -7,6 +7,7 @@ const server = require('http').Server(app);
 const io = require('socket.io').listen(server);
 const lib = require('./server/game/lib/lib');
 const EventEmitter = require('events').EventEmitter;
+const port = process.env.PORT || 8080;
 
 // Monkey patching/extensions 
 lib.extend(EventEmitter);
@@ -18,4 +19,4 @@ app.use(express.bodyParser());
 // Game
 app.use(express.static(__dirname + "/public/"));
 
-server.listen(8080);
+server.listen(port);
