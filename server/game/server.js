@@ -6,7 +6,7 @@ let Game  = require('./game');
 let viewId    = 0,
     playerId  = 1;
 
-var Server = {
+let Server = {
   init: function (io) {
     this.views = {};
 

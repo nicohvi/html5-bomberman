@@ -3,9 +3,7 @@
 
 let _ = require('lodash');
 let B = require('baconjs').Bacon;
-//let util = require('util');
 let EventEmitter = require('events').EventEmitter;
-
 let lib = require('./lib/lib');
 
 // Components
@@ -15,6 +13,7 @@ let Flame   = require('./flame');
 let GameMap = require('./map');
 
 const Constants       = require('./constants');
+
 let CollisionDetector = require('./lib/CollisionDetector');
 let BombManager       = require('./lib/BombManager');
 
@@ -85,7 +84,6 @@ let Game = {
 
     this.updateScore(player, killer, suicide);
     player.die(this.lastTick);
-    // TODO: Score
     this.emit('player-die', { player: player, killer: killer, suicide: suicide });
   },
 
@@ -198,6 +196,7 @@ let Game = {
       .filter(function (flame) {
         return this.collisionDetector.collision(plr, flame);
       }.bind(this))
+      .first()
       .onValue(function (flame) {
         this.killPlayer(plr, flame);
       }.bind(this));
@@ -301,9 +300,13 @@ let Game = {
   },
 
   direction (x) {
-    // x > 0  -> 1
-    // x == 0 -> 0
-    // x < 0  -> -1
+    /* 
+    *   x > 0  -> 1
+    *   x == 0 -> 0
+    *   x < 0  -> -1
+    *   Used to determine the player girth so that the collisions
+    *   seem authentic. 
+    */
     return x > 0 ? 1 : x < 0 ? -1 : 0;
   },
 
@@ -313,7 +316,9 @@ let Game = {
 };
 
 let gameFactory = function () {
-  // extend the game with the eventemitter prototype
+  // Extend the game with the eventemitter prototype
+  // so the game object can emit events to server for 
+  // communication to the clients.
   let game = Object.create(_.assign({}, EventEmitter.prototype, Game));
   return game.init();
 };
