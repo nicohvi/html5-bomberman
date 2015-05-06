@@ -55,7 +55,7 @@ let Server = {
       id = playerId++; 
       console.log('player ' +data.name+ ' joining the game with id: '+ id);
       this.game.addPlayer(_.assign({ id: id }, data));
-      socket.emit('joined-game');
+      socket.emit('joined-game', { id: id });
     }.bind(this));
     
     socket.on('request-move', function (data) {
