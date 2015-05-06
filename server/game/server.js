@@ -20,6 +20,8 @@ let Server = {
     
     this.game = Game();
     this.setupGameListeners.call(this);
+
+    return this;
   },
 
   setupGameListeners: function () {

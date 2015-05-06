@@ -7,16 +7,29 @@ const server = require('http').Server(app);
 const io = require('socket.io').listen(server);
 const lib = require('./server/game/lib/lib');
 const EventEmitter = require('events').EventEmitter;
+const GameServer = require("./server/game/server");
 const port = process.env.PORT || 8080;
+
+let socketman = {
+  listen (customPort) {
+    if(typeof(customPort) === 'undefined') {
+      server.listen(port);
+    } else {
+      server.listen(customPort);
+    }
+  },
+
+  close () {
+    server.close();
+  }
+};
 
 // Monkey patching/extensions 
 lib.extend(EventEmitter);
-const Server = require("./server/game/server");
 
-Server.init(io);
 app.use(express.bodyParser());
-
-// Game
 app.use(express.static(__dirname + "/public/"));
 
-server.listen(port);
+let gameServer = GameServer.init(io);
+
+module.exports = socketman;

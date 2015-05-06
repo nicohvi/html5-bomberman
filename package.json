@@ -5,12 +5,21 @@
     "iojs": "1.7.x"
   },
   "scripts": {
-    "start": "node --harmony_arrow_functions --harmony_object_literals server.js"
+    "start": "node --harmony_arrow_functions --harmony_object_literals index.js",
+    "test": "node --harmony_arrow_functions --harmony_object_literals ./node_modules/gulp/bin/gulp watch"
   },
   "dependencies": {
     "express": "~3.3.8",
 	  "socket.io": "0.9.12",
     "lodash": "3.6.0",
     "baconjs": "0.7.53"
+  },
+  "devDependencies": {
+    "mocha": "2.2.4",
+    "superagent": "1.2.0",
+    "gulp": "3.8.11",
+    "gulp-mocha": "2.0.1",
+    "gulp-util": "3.0.4",
+    "socket.io-client": "^0.9.17"
   }
 }
