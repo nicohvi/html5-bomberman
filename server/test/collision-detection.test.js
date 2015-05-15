@@ -1,19 +1,12 @@
-/* jslint node: true */
+/*jslint node: true */
 "use strict";
 
-const assert              = require('assert'),
-      CollisionDetector   = require('../game/lib/CollisionDetector'),
-  Map                     = require('../game/map'),
-  BombManager             = require('../game/lib/BombManager'),
-  Constants               = require('../game/constants'),
-  Player                  = require('../game/player'),
-  Bomb                    = require('../game/bomb'),
-  playerOpts              = {
-    id: 1,
-    name: 'Frank',
-  },
-  bombId                  = 1,
-  player                  = new Player(playerOpts);
+const tools             = require('./spec_helper'),
+      assert            = tools.assert,
+      CollisionDetector = tools.CollisionDetector,
+      BombManager       = tools.BombManager,
+      Constants         = tools.Constants,
+      player            = tools.createPlayer();
 
 let map = null,
     bombManager = null,
@@ -22,8 +15,7 @@ let map = null,
 describe('CollisionDetector', () => {
 
   before( () => {
-    map = new Map({ width: Constants.MAP_WIDTH,
-                    height: Constants.MAP_HEIGHT });
+    map = tools.createMap();
     bombManager = BombManager({ map: map });
     colDet = CollisionDetector({  map: map, 
                                   bombManager: bombManager });
@@ -82,14 +74,13 @@ describe('CollisionDetector', () => {
     beforeEach( () => {
       map.setTile(bombTile.x, bombTile.y, Constants.TILE_EMPTY);
       map.setTile(emptyTile.x, emptyTile.y, Constants.TILE_EMPTY);
-      let bomb = new Bomb({ id: bombId, 
-      player: { x: bombTile.x, y: bombTile.y } });
+      let bomb = tools.createBomb(1);
       bomb.active = true;
       bombManager.addBomb(bomb);
     });
 
     afterEach( () => {
-      bombManager.removeBomb({ id: bombId });
+      bombManager.removeBomb({ id: 1 });
     }); 
 
     it("should return false for tiles with no bombs", done => {
@@ -116,14 +107,13 @@ describe('CollisionDetector', () => {
       map.setTile(brickTile.x, brickTile.y, Constants.TILE_BRICK);
       map.setTile(solidTile.x, solidTile.y, Constants.TILE_SOLID);
       map.setTile(emptyTile.x, emptyTile.y, Constants.TILE_EMPTY);
-      let bomb = new Bomb({ id: bombId, 
-      player: { x: bombTile.x, y: bombTile.y } });
+      let bomb = tools.createBomb(1); 
       bomb.active = true;
       bombManager.addBomb(bomb);
     });
 
     afterEach( () => {
-      bombManager.removeBomb({ id: bombId });
+      bombManager.removeBomb({ id: 1 });
     }); 
 
     it("returns false when the move is not allowed", done => {
