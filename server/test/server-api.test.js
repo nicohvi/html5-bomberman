@@ -6,7 +6,7 @@ const assert      = require('assert'),
       http        = require('http'),
       server      = require('../../server'),
       io          = require('socket.io-client'),
-      playerName        = 'Frank',
+      playerName  = 'Frank',
       socketURL   = 'http://0.0.0.0:'+port,
       options     = {
         transports: ['websocket'],

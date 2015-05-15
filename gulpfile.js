@@ -6,7 +6,7 @@ let gutil = require('gulp-util');
 
 gulp.task('mocha', () => {
   return gulp.src(['server/test/*.js'], { read: false })
-          .pipe(mocha({reporter: 'list'}))
+          .pipe(mocha())
           .on('error', gutil.log);
 });
 
