@@ -11,12 +11,13 @@ const assert              = require('assert'),
   playerOpts              = {
     id: 1,
     name: 'Frank',
-  };
+  },
+  bombId                  = 1,
+  player                  = new Player(playerOpts);
 
 let map = null,
     bombManager = null,
-    colDet = null,
-    player  = new Player(playerOpts);
+    colDet = null;
 
 describe('CollisionDetector', () => {
 
@@ -76,13 +77,10 @@ describe('CollisionDetector', () => {
 
   describe("bomb collision", () => {
     const bombTile = { x: 50, y: 50 },
-          playerTile = { x: 51, y: 50 },
-          emptyTile = { x: 52, y: 50 },
-          bombId = 1;
+          emptyTile = { x: 52, y: 50 };
 
     beforeEach( () => {
       map.setTile(bombTile.x, bombTile.y, Constants.TILE_EMPTY);
-      map.setTile(playerTile.x, playerTile.y, Constants.TILE_EMPTY);
       map.setTile(emptyTile.x, emptyTile.y, Constants.TILE_EMPTY);
       let bomb = new Bomb({ id: bombId, 
       player: { x: bombTile.x, y: bombTile.y } });
@@ -91,7 +89,7 @@ describe('CollisionDetector', () => {
     });
 
     afterEach( () => {
-      bombManager.removeBomb({ id: 1 });
+      bombManager.removeBomb({ id: bombId });
     }); 
 
     it("should return false for tiles with no bombs", done => {
@@ -107,5 +105,39 @@ describe('CollisionDetector', () => {
     });
   });
 
-});
+  describe("can move", () => {
+    const bombTile = { x: 50, y: 50 },
+          brickTile = { x: 51, y: 50 },
+          solidTile = { x: 52, y: 50 },
+          emptyTile = { x: 53, y: 50 };
 
+    beforeEach( () => {
+      map.setTile(bombTile.x, bombTile.y, Constants.TILE_EMPTY);
+      map.setTile(brickTile.x, brickTile.y, Constants.TILE_BRICK);
+      map.setTile(solidTile.x, solidTile.y, Constants.TILE_SOLID);
+      map.setTile(emptyTile.x, emptyTile.y, Constants.TILE_EMPTY);
+      let bomb = new Bomb({ id: bombId, 
+      player: { x: bombTile.x, y: bombTile.y } });
+      bomb.active = true;
+      bombManager.addBomb(bomb);
+    });
+
+    afterEach( () => {
+      bombManager.removeBomb({ id: bombId });
+    }); 
+
+    it("returns false when the move is not allowed", done => {
+      assert.equal(false, colDet.canMove(bombTile.x, bombTile.y)); 
+      assert.equal(false, colDet.canMove(brickTile.x, brickTile.y)); 
+      assert.equal(false, colDet.canMove(solidTile.x, solidTile.y)); 
+      done();
+    });
+
+    it("returns true when the move is allowed", done => {
+      assert.equal(true, colDet.canMove(emptyTile.x, emptyTile.y));
+      done();
+    });
+
+  });
+
+});

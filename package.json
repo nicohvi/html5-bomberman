@@ -20,6 +20,7 @@
     "gulp": "3.8.11",
     "gulp-mocha": "2.0.1",
     "gulp-util": "3.0.4",
-    "socket.io-client": "^0.9.17"
+    "socket.io-client": "^0.9.17",
+    "gulp-istanbul": "0.9.0"
   }
 }
