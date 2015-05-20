@@ -27,10 +27,7 @@ var lib = {
             return item; 
           }));
       });
-
       return function () { };
-    // Delay makes the stream source async, which will be 
-    // default in bacon 0.8
     });
   },  
 

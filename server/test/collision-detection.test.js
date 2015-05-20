@@ -24,7 +24,7 @@ describe('CollisionDetector', () => {
   });
 
   it("should return null when there is no collision", done => {
-    let newTile = { x: player.x + 1, y: player.y +1 }
+    let newTile = { x: player.x + 1, y: player.y +1 };
     map.setTile(newTile.x, newTile.y, Constants.TILE_EMPTY);
 
     assert.equal(null, colDet.collision(player, newTile));
@@ -32,7 +32,7 @@ describe('CollisionDetector', () => {
   });
 
   it("should return the tile when there's a collision", done => {
-    let newTile = { x: player.x + 1, y: player.y +1 }
+    let newTile = { x: player.x + 1, y: player.y +1 };
     map.setTile(newTile.x, newTile.y, Constants.TILE_SOLID);
 
     player.deltaMove(1,1);
@@ -74,7 +74,7 @@ describe('CollisionDetector', () => {
     beforeEach( () => {
       map.setTile(bombTile.x, bombTile.y, Constants.TILE_EMPTY);
       map.setTile(emptyTile.x, emptyTile.y, Constants.TILE_EMPTY);
-      let bomb = tools.createBomb(1);
+      let bomb = tools.createBomb(1, 50, 50);
       bomb.active = true;
       bombManager.addBomb(bomb);
     });
@@ -107,7 +107,7 @@ describe('CollisionDetector', () => {
       map.setTile(brickTile.x, brickTile.y, Constants.TILE_BRICK);
       map.setTile(solidTile.x, solidTile.y, Constants.TILE_SOLID);
       map.setTile(emptyTile.x, emptyTile.y, Constants.TILE_EMPTY);
-      let bomb = tools.createBomb(1); 
+      let bomb = tools.createBomb(1, bombTile.x, bombTile.y); 
       bomb.active = true;
       bombManager.addBomb(bomb);
     });

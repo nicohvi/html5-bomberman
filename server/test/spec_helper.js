@@ -26,8 +26,7 @@ module.exports = {
     return new GameMap({ width: Constants.MAP_WIDTH,
                   height: Constants.MAP_HEIGHT });
   },
-  createBomb: (id) => { 
-    id = id || 1;
-    return new Bomb({ id: id, player: { x: 50, y: 50 } });
+  createBomb: (id, x, y) => { 
+    return new Bomb({ id: id, player: { x: x, y: y }, strength: 4 });
   }
 };
