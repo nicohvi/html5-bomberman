@@ -22,6 +22,10 @@ let BombManager = {
   removeBomb (bomb) {
     delete this.bombs[bomb.id];
   },
+  
+  removeAllBombs () {
+    this.bombs = {};
+  },
 
   getBomb (id) {
     return this.bombs[id];
