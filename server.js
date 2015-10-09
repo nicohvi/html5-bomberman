@@ -1,28 +1,31 @@
 /*jslint node: true */
 "use strict";
 
-const express = require("express");
-const app = express();
-const server = require('http').Server(app);
-const io = require('socket.io').listen(server);
-const lib = require('./server/game/lib/lib');
-const EventEmitter = require('events').EventEmitter;
-const GameServer = require("./server/game/server");
-const port = process.env.PORT || 8080;
+const express = require("express"),
+      app = express(),
+      _server = require('http').Server(app),
+      lib = require('./src/lib/lib'),
+      EventEmitter = require('events').EventEmitter;
 
-let socketman = {
+let server = {
   listen (customPort) {
-    if(typeof(customPort) === 'undefined') {
-      server.listen(port);
-    } else {
-      server.listen(customPort);
-    }
+    let port = customPort || 8080;
+    _server.listen(port);
   },
 
   close () {
-    server.close();
-  }
+    _server.close();
+  },
+
+  httpServer: _server
 };
+
+server.get = (route, view) => {
+  app.get(route, (req, res) => {
+    res.render(view); 
+  });
+};
+
 
 // Monkey patching/extensions 
 lib.extend(EventEmitter);
@@ -30,6 +33,5 @@ lib.extend(EventEmitter);
 app.use(express.bodyParser());
 app.use(express.static(__dirname + "/public/"));
 
-let gameServer = GameServer.init(io);
-
-module.exports = socketman;
+app.set('view engine', 'jade');
+module.exports = server;

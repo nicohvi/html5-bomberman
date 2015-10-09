@@ -8,7 +8,7 @@ const Player = require('./Player.react');
 const Leaderboard = React.createClass({
 
   render: function () {
-    const key = 0;
+    let key = 0;
     const players = _.sortBy(this.props.players, function (player) {
       return player.score;
     }).reverse().map(function (player) {

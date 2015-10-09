@@ -2,7 +2,7 @@
   "name": "Socketman",
   "version": "0.0.1",
   "engines": {
-    "iojs": "1.7.x"
+    "iojs": "^3.3.0"
   },
   "scripts": {
     "start": "node --harmony_arrow_functions --harmony_object_literals index.js",
@@ -12,7 +12,8 @@
     "express": "~3.3.8",
 	  "socket.io": "0.9.12",
     "lodash": "3.6.0",
-    "baconjs": "0.7.53"
+    "baconjs": "0.7.53",
+    "jade": "^1.11.0"
   },
   "devDependencies": {
     "mocha": "2.2.4",

@@ -26,3 +26,9 @@ prediction is possible ATOW which means the game will be rather laggy unless you
 ## Development
 
 `npm install --save-dev`
+
+## How do I run it?
+
+`node index.js` fires up the server running on port 3000 (hey, rails is cool - shut up). The server offers endpoints
+for players and views. If you want to connect as a player you need to connect to the `/player` endpoint (which setups a 
+websockets connection), otherwise connect to the `/board` endpoint to get a lovely view of the current game board.

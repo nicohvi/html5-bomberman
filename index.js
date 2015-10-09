@@ -1,3 +1,14 @@
-const server = require('./server');
+"use strict";
 
-server.listen(3000);
+const server = require('./server'),
+      socketServer = require('./socketServer'),
+      game = require('./src/game/server'),
+      port = 3000;
+
+server.get('/board', 'board');
+server.get('/player', 'player');
+
+server.listen(port);
+let io = socketServer.listen(server.httpServer);
+
+game.init(io);

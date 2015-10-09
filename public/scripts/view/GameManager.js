@@ -1,8 +1,9 @@
 /*jshint browserify: true */
 "use strict";
 
-let io = require('socket.io-client');
-let Game = require('./Game');
+const io  = require('socket.io-client'),
+  Game    = require('./Game'),
+  $       = require('jquery');
 
 let GameManager = {
 
@@ -26,6 +27,14 @@ let GameManager = {
     this.socket.on('flames-die', this.onFlamesDie.bind(this));
     this.socket.on('game-done', this.onGameDone.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
+
+    $('#js-start-round').click( e => {
+      this.socket.emit('start-round');
+    });
+
+    $('#js-end-round').click( e => {
+      this.socket.emit('end-round');
+    });
   },
 
   onGameInfo: function (data) {

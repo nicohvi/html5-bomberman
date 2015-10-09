@@ -5,7 +5,7 @@ var Leaderboard = require('./Leaderboard.react');
 // TODO: remember state
 var LeaderBoardLoader = {
   load: function (players) {
-    React.render(<Leaderboard players={players} />, document.getElementById("leaderboard-component"));
+    React.render(<Leaderboard players={players} />, document.getElementById("js-leaderboard"));
   }
 };
 

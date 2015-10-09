@@ -44661,7 +44661,7 @@ var Leaderboard = require('./Leaderboard.react');
 // TODO: remember state
 var LeaderBoardLoader = {
   load: function load(players) {
-    React.render(React.createElement(Leaderboard, { players: players }), document.getElementById('leaderboard-component'));
+    React.render(React.createElement(Leaderboard, { players: players }), document.getElementById('js-leaderboard'));
   }
 };
 
@@ -45098,8 +45098,9 @@ module.exports = Game;
 /*jshint browserify: true */
 'use strict';
 
-var io = require('socket.io-client');
-var Game = require('./Game');
+var io = require('socket.io-client'),
+    Game = require('./Game'),
+    $ = require('jquery');
 
 var GameManager = {
 
@@ -45109,6 +45110,8 @@ var GameManager = {
   },
 
   setupListeners: function setupListeners() {
+    var _this = this;
+
     this.socket.on('game-info', this.onGameInfo.bind(this));
     this.socket.on('player-join', this.onPlayerJoin.bind(this));
     this.socket.on('player-leave', this.onPlayerLeave.bind(this));
@@ -45123,6 +45126,14 @@ var GameManager = {
     this.socket.on('flames-die', this.onFlamesDie.bind(this));
     this.socket.on('game-done', this.onGameDone.bind(this));
     this.socket.on('pong', this.onPong.bind(this));
+
+    $('#js-start-round').click(function (e) {
+      _this.socket.emit('start-round');
+    });
+
+    $('#js-end-round').click(function (e) {
+      _this.socket.emit('end-round');
+    });
   },
 
   onGameInfo: function onGameInfo(data) {
@@ -45188,7 +45199,7 @@ var GameManager = {
 module.exports = GameManager;
 
 
-},{"./Game":166,"socket.io-client":159}],168:[function(require,module,exports){
+},{"./Game":166,"jquery":2,"socket.io-client":159}],168:[function(require,module,exports){
 /*jshint browserify: true */
 "use strict";
 
