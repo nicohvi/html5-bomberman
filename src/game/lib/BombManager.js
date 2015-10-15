@@ -1,44 +1,47 @@
 /*jslint node: true */
 "use strict";
 
-let lib   = require('./lib');
-let _ = require('lodash');
-let B = require('baconjs').Bacon;
+const lib   = require('./lib'),
+      _ = require('lodash'),
+      B = require('baconjs').Bacon,
+      Constants = require('./../constants');
 
-const Constants = require('./../constants');
+let bombs = null,
+    map = null;
 
 let BombManager = {
 
   init (opts) {
-    this.map = opts.map;
-    this.bombs = {};
-    return this;
+    map = opts.map;
+    bombs = {};
+  },
+
+  getBombs () {
+    return bombs;
   },
    
   addBomb (bomb) {
-    this.bombs[bomb.id] = bomb;
+    bombs[bomb.id] = bomb;
   },
 
   removeBomb (bomb) {
-    delete this.bombs[bomb.id];
+    delete bombs[bomb.id];
   },
   
   removeAllBombs () {
-    this.bombs = {};
+    bombs = {};
   },
 
   getBomb (id) {
-    return this.bombs[id];
+    return bombs[id];
   },
 
   hasBomb (x, y) {
-    return !_.isEmpty(_.filter(this.bombs, function (bomb) {
-      return bomb.x === x && bomb.y === y && bomb.active;
-    }));
+    return !_.isEmpty(_.filter(bombs, bomb => bomb.x === x && bomb.y === y && bomb.active));
   },
 
   activateBomb (bomb) {
-    this.bombs[bomb.id].active = true;
+    bombs[bomb.id].active = true;
   },
 
   explodeBomb (bomb) {
@@ -50,17 +53,15 @@ let BombManager = {
   },
 
   getTiles (bomb) {
-    let horizontalTiles = this.map.getRowTiles(lib.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
-    verticalTiles = this.map.getColumnTiles(lib.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
+    let horizontalTiles = map.getRowTiles(lib.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
+    verticalTiles = map.getColumnTiles(lib.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
 
     let tiles = this.filterTiles(horizontalTiles).concat(this.filterTiles(verticalTiles));
     return tiles; 
   },
 
   getDirtyTiles (tiles) {
-    return _.filter(tiles, function (tile) {
-      return tile.value === Constants.TILE_BRICK;
-    });
+    return _.filter(tiles, tile => tile.value === Constants.TILE_BRICK);
   },
 
   filterTiles (tiles) {
@@ -85,7 +86,8 @@ let BombManager = {
 
 let bombManagerFactory = function (opts) {
   let bombManager = Object.create(BombManager);
-  return bombManager.init(opts);
+  bombManager.init(opts);
+  return bombManager;
 };
 
 module.exports = bombManagerFactory;

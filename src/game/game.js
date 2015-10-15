@@ -24,7 +24,7 @@ let bombId = 0,
     bombManager = null,
     collisionDetector = null,
     done = false,
-    go = false,
+    go = true,
     lastTick = null,
     winner = null;
 
@@ -39,7 +39,6 @@ let Game = {
 
     // 60 Hz: 1/60 = 0.167 ~ 17 ms
     setInterval(this.update.bind(this), 17);
-    //return this;
   },
 
   startRound () {
@@ -220,30 +219,25 @@ let Game = {
   },
 
   updateBombs (tick) {
-    const bombStream  = lib.stream(bombManager.bombs);
+    let bombStream  = lib.stream(bombManager.getBombs()),
+      bombsToBlow = bombStream.filter(bomb => !bomb.exploded && bomb.active &&
+        (tick - bomb.placedAt > Constants.BOMB_TIMER)),
+      oldBombs = bombStream.filter(bomb => bomb.exploded),
+      newBombs = bombStream.filter(bomb => !bomb.exploded && !bomb.active && 
+        (tick - bomb.placedAt > Constants.FUSE_TIME));
     
-    bombStream
-    .filter(bomb => bomb.exploded)
-    .onValue(bombManager.removeBomb);
-
-    bombStream
-    .filter(bomb => !bomb.exploded && !bomb.active 
-      && (tick - bomb.placedAt > Constants.FUSE_TIME))
-    .onValue(bombManager.activateBomb);
-
-    bombStream
-    .filter(bomb => !bomb.exploded && bomb.active 
-      && (tick - bomb.placedAt > Constants.BOMB_TIMER))
-    .onValue(bombManager.explodeBomb);
+    oldBombs.onValue(bombManager.removeBomb.bind(bombManager));
+    newBombs.onValue(bombManager.activateBomb.bind(bombManager));
+    bombsToBlow.onValue(this.explodeBomb.bind(this));
   },
 
   chainBombs (tiles, bombId) {
-    const bombStream = lib.syncStream(bombManager.bombs);
+    const bombStream = lib.syncStream(bombManager.getBombs());
     
     bombStream
     .filter(bomb => bomb.id !== bombId &&
     this.tileCollision(bomb, tiles))
-    .onValue(this.explodeBomb);
+    .onValue(this.explodeBomb.bind(this));
   },
 
   tileCollision (bomb, tiles) {
@@ -251,15 +245,15 @@ let Game = {
   },
 
   updateFlames (tick) {
-    let flames = [];
-
+    let oldFlames = [];
+    
     lib.syncStream(flames)
     .filter(flame => (tick - flame.spawnTime) > Constants.FLAME_TIME)
     .doAction(flame => delete flames[flame.id])
-    .onValue(flames.push);
+    .onValue(flame => oldFlames.push(flame));
 
-    if(!_.isEmpty(flames)) 
-      this.emit('flames-die', { flames: flames });
+    if(!_.isEmpty(oldFlames)) 
+      this.emit('flames-die', { flames: oldFlames });
   },
 
   explodeBomb (bomb) {
@@ -271,14 +265,14 @@ let Game = {
         dirtyTiles = _.filter(tiles, tile => tile.value === Constants.TILE_BRICK);
     
     this.emit('bomb-explode', { bomb: bomb });
-    
+   
     this.spawnFlames(tiles, bomb.playerId);
     this.updateMap(dirtyTiles);
     this.chainBombs(tiles, bomb.id);
   },
 
   spawnFlames (tiles, playerId) {
-    let flames = [],
+    let newFlames = [],
         now = lastTick;
 
     B.fromArray(tiles)
@@ -289,9 +283,8 @@ let Game = {
         playerId: playerId,   
         time: now}))
       .doAction(flame => flames[flame.id] = flame)
-      .onValue(flames.push);
-
-    this.emit('flames-spawn', { flames: flames});    
+      .onValue(flame => { newFlames.push(flame); });
+    this.emit('flames-spawn', { flames: newFlames });    
   },
 
   updateMap (tiles) {
