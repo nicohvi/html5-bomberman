@@ -1,158 +1,188 @@
 /*jshint browserify: true */
 "use strict";
 
-const _ = require('lodash');
+const _ = require('lodash'),
+  Player  = require('./player'),
+  Bomb    = require('./Bomb'),
+  Flame   = require('./Flame');
 
-let Canvas  = require('./Canvas');
-let GameMap = require('./Map');
-let Player  = require('./player');
-let Bomb    = require('./Bomb');
-let Flame   = require('./Flame');
-let Leaderboard = require('../components/leaderboard');
+let Map         = require('./Map'),
+    Canvas      = require('./Canvas'), 
+    Leaderboard = require('../components/leaderboard.react'),
+    Timer       = require('../components/Timer.react'),
+    _running    = false,
+    _lastTick   = null,
+    _players    = {},
+    _bombs      = {},
+    _flames     = {};
 
 function getTicks() {
   return new Date().getTime();
-} 
+};
+
+function playSound (clip) {
+  let audio = new Audio('../../sounds/'+clip+'.wav');
+  audio.play();
+};
+
+function getPlayers (plrs) {
+  if(_.isEmpty(plrs)) return {};
+  _.each(plrs, plr => _players[plr.id] = new Player(plr));
+};
+
+function error (player) {
+  console.log('error: ' +player);
+};
 
 let Game = {
-  init: function (data) {
-    this.lastTick = getTicks();
-    this.players = this._getplayers(data.players);
-    this.bombs = {};
-    this.flames = {};
 
-    GameMap.init(data.map);
-    Canvas.init(data.map.width, data.map.height);
-    Leaderboard.load(this.players);
+  init: function (data) {
+    _running = false;
+    _bombs = {};
+    _flames = {};
+    Timer.stop();
+
+    let state = data.game;
+    _lastTick = getTicks();
+    getPlayers(state.players);
+    Map.init(state.map);
+    Canvas.init(state.map.width, state.map.height);
+    Leaderboard.reload(_players);
 
     this.update();
   },
 
-  playerJoin: function (plr) {
-    console.log('player join');
-    let newPlayer = Player(plr);
-    this.players[plr.id] = newPlayer;
-    Leaderboard.load(this.players);
-  },
-
-  playerLeave: function (id) {
-    console.log('player leave');
-    if(_.isEmpty(this.players)) { return; }
-    delete this.players[id];
-    Leaderboard.load(this.players);
-  },
-
-  playerSpawn: function (plr) {
-    console.log('player spawn');
-    let player = this.players[plr.id];
-    player.update(plr);
-  },
-  
-  playerUpdate: function (plr) {
-    let player = this.players[plr.id];
-    if(!plr) {
-      console.log('Unkown update: ' +player.id);
-      return;
-    }  
-    player.update(plr); 
-  },
-
-  playerDie: function (plr, killer, suicide) {
-    const player = this.players[plr.id];
-    console.log(player.name+ ' killed by ' +killer.name);
-  
-    player.die();
-    
-    if(suicide) {
-      this._playSound('suicide');
-    } else {
-      this._playSound('die');
-    }
-  },
-
-  playerScore: function (plr) {
-    this.players[plr.id].updateScore(plr.score);
-    Leaderboard.load(this.players);
-  },
-
-  bombPlace: function (bomb) {
-    console.log('place bomb');
-    this.bombs[bomb.id] = new Bomb(bomb);
-  },
-
-  bombExplode: function (bomb) {
-    console.log('bomb explode');
-    delete this.bombs[bomb.id];
-  },
-
-  mapUpdate: function (tiles) {
-    GameMap.update(tiles);
-    Canvas.addDirtyTiles(tiles);
-  },
-
-  flamesSpawn: function (flames) {
-    console.log('flames spawn');
-    _.forEach(flames, function (flame) {
-      this.flames[flame.id] = new Flame(flame);
-    }.bind(this));
-  },
-
-  flamesDie: function (flames) {
-    console.log('flames done');
-    _.forEach(flames, function (flame) {
-      delete this.flames[flame.id];
-    }.bind(this));
-  },
-
-  gameDone: function (plr) {
-    console.log('game over');
-    this._playSound('win');
-    this.players[plr.id].winner = true;
-    Leaderboard.load(this.players);
-  },
-
-  update: function () {
+  update () {
     let now   = getTicks(),
-        delta = (now - this.lastTick) / 1000;
+        delta = (now - _lastTick) / 1000;
 
-    _.each(this.players, function (plr) {
-      plr.animationUpdate(delta);
-    });
-
-    _.each(this.bombs, function (bomb) {
-      bomb.animationUpdate(delta);
-    });
-   
-    _.each(this.flames, function (flame) {
-      flame.animationUpdate(delta);
-    });
-
-    Canvas.update(this.players, this.bombs, this.flames);
+    _.each(_players, plr => plr.animationUpdate.call(plr, delta));
+    _.each(_bombs, bomb => bomb.animationUpdate.call(bomb, delta));
+    _.each(_flames, flame => flame.animationUpdate.call(flame, delta));
+    
+    Canvas.update(_players, _bombs, _flames);
     Canvas.drawMap();
+    Leaderboard.reload(_players);
 
-    this.lastTick = now;
+    _lastTick = now;
     window.requestAnimationFrame(this.update.bind(this));
   },
 
-  _getplayers: function (players) {
-    if(_.isEmpty(players)) { return players; }
-    let hash = {};
-    _.each(players, function (plr) {
-      hash[plr.id] = Player(plr);
-    }.bind(this));
-    return hash;
+  event (data) {
+    switch(data.action) {
+      case 'begin':
+        this.begin();
+        break;
+      case 'end':
+        this.end(data.winner);
+        Timer.stop();
+        break;
+      case 'countdown':
+        Timer.start();
+        break;
+    };
   },
 
-  _addFlames: function (tiles) {
-    return _.map(tiles, function(tile) {
-      return new Flame(tile);
-    });
+  begin () {
+    console.log('begin round');
+    _running = true;
   },
 
-  _playSound: function (clip) {
-    let audio = new Audio('../../sounds/'+clip+'.wav');
-    audio.play();
-  }
+  end (winner) {
+    _running = false;
+    _bombs = {};
+    _flames = {};
+    _.each(_players, plr => plr.stop());
+    console.log(_players);
+
+    if(!winner) return alert("No winners, you guys suck");
+    _players[winner.id].winner = true;
+    Leaderboard.reload(_players);
+    playSound('win');
+  },
+
+  pong () {
+    console.log('pong');
+  },
+
+  playerUpdate (data) {
+    let plr = data.player,
+        message = null;
+
+    if(data.action !== 'join' && !_players[plr.id]) return error(plr);
+
+    switch(data.action) {
+      case 'join':
+        message = 'Player ' +plr.name+ ' joined';
+        _players[plr.id] = new Player(plr);
+        break;
+      case 'leave':
+        message = 'Player ' +plr.name+ ' left';
+        delete _players[plr.id];
+        break;
+      case 'spawn':
+        message = 'Player '+ plr.name+ ' spawned';
+        _players[plr.id].spawn(plr.x, plr.y);
+        playSound('spawn');
+        break;
+      case 'update':
+        _players[plr.id].update(plr);
+        break;
+      case 'die':
+        message = 'Player ' +plr.name+ ' was killed by ' +data.killer.name;
+        _players[plr.id].die();
+
+        data.suicide ? playSound('suicide') : playSound('die');
+        break;
+      case 'score':
+        _players[plr.id].updateScore(plr.score); 
+        break;
+    };
+
+    if(message) console.log(message);
+  },
+
+  bombUpdate (data) {
+    let bomb = data.bomb,
+      message = null;
+    
+    switch(data.action) {
+      case 'place':
+        message = 'Place bomb';
+        _bombs[bomb.id] = new Bomb(bomb);
+        break;
+      case 'explode':
+        message = 'Boom!';
+        delete _bombs[bomb.id];
+        playSound('explode');
+        break;
+    };
+
+    if(message) console.log(message);
+  },
+
+  flameUpdate (data) {
+    let flames = data.flames,
+      message = null;
+
+    switch(data.action) {
+      case 'spawn':
+        message = 'Flames spawned';
+        _.each(flames, flame => _flames[flame.id] = new Flame(flame));
+        break;
+      case 'die':
+        message = 'Flames die off';
+        _.each(flames, flame => delete _flames[flame.id]);
+    };
+
+    if(message) console.log(message);
+  },
+
+  mapUpdate: function (data) {
+    Map.update(data.tiles);
+    Canvas.addDirtyTiles(data.tiles);
+  },
+  
 };
 
 module.exports = Game;

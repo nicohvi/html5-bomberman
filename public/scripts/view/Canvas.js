@@ -4,7 +4,7 @@
 const $ = require('jquery');
 const _ = require('lodash');
 
-const GameMap = require('./Map');
+let Map = require('./Map');
 
 let SpritesToLoad = 7;
 
@@ -17,8 +17,11 @@ const SQUARE_SIZE = 16,
       BOMB_ANIM_SPEED = 0.1,
       FLAME_ANIM_SPEED = 0.15;
 
-const Canvas = {
+let Canvas = {
   init (width, height) {
+    // Delete all old canvases.
+    $('canvas').remove();
+
     this.dirtyTiles = [];
     this.charSprites = {};
 
@@ -101,23 +104,13 @@ const Canvas = {
 
   drawMap () {
     if(!this.initialized) { return; }
-
     if(this.repaint) { return this.redrawMap(); }
     
     // Draw dirty zones
     _.forEach(this.dirtyTiles, function (dirtyTile) {
-      const newTile = GameMap.getTile(dirtyTile.x, dirtyTile.y);
+      const newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
       this.drawTile(dirtyTile.x, dirtyTile.y, newTile);
     }.bind(this));
-      //for(var j = 0; j < zone.width; j++) {
-        //for(var k = 0; k < zone.height; k++) {
-          //var cx    = j + zone.x,
-              //cy    = k + zone.y,
-              
-          //drawnTiles++;
-        //} // k
-      //} // j
-    //} // i
 
     this.dirtyTiles = [];
   },
@@ -125,9 +118,11 @@ const Canvas = {
   
   // full repaint
   redrawMap () {
-    _.times(GameMap.height, function (y) {
-      _.times(GameMap.width, function (x) {
-        const tile = GameMap.getTile(x, y);
+    const bounds = Map.getBounds();
+
+    _.times(bounds.height, function (y) {
+      _.times(bounds.width, function (x) {
+        const tile = Map.getTile(x, y);
         this.drawTile(x, y, tile);
       }.bind(this));
     }.bind(this));

@@ -1,10 +1,10 @@
-var React = require('react');
+const React = require('react');
 
-var Player = React.createClass({
+let Player = React.createClass({
 
   render: function () {
-    var cx = this.props.winner ? 'winner' : '';
-    return <li className={cx}>{this.props.name}: {this.props.score}</li>;
+    var cx = this.props.player.winner ? 'winner' : '';
+    return <li className={cx}>{this.props.player.name}: {this.props.player.score}</li>;
   }
 
 });

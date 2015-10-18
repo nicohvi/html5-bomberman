@@ -25,17 +25,8 @@ let Server = {
     this.setupGameListeners();
   },
 
-  startGameRound () {
-    console.log('start-round');
-    game.startNewRound();
-  },
-
   setupGameListeners: function () {
-    game.onMany( 
-      [ 'player-join', 'player-spawn', 'player-update', 
-        'player-die', 'bomb-place', 'bomb-explode', 
-        'flames-spawn', 'map-update', 'player-score',
-        'flames-die', 'game-over', 'player-leave'],
+    game.onMany(['game', 'player', 'bomb', 'flame', 'map', 'pong'],
       this.viewUpdate.bind(this));
   },
   
@@ -45,7 +36,7 @@ let Server = {
     let id = viewId++;
     views[id] = socket;
 
-    socket.emit('game-info', { game: game.state() } );
+    socket.emit('init', { game: game.state() } );
 
     socket.on('disconnect', () => { 
       console.log('disconnect');
@@ -54,6 +45,10 @@ let Server = {
 
     socket.on('start-round', game.startRound);
     socket.on('end-round', game.endRound); 
+    socket.on('reset', () => {
+      game.reset();
+      socket.emit('init', { game: game.state() });
+    });
   },
 
   onPlayerConnection: function (socket) {
@@ -86,9 +81,8 @@ let Server = {
   },
 
   viewUpdate: function (event, payload) {
-    if(event !== 'player-update') {
+    if(payload.action !== 'update')
       console.log('called event: ' +event);
-    }
     _.forEach(views, function (view) {
       view.emit(event, payload);
    });

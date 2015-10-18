@@ -1,19 +1,18 @@
 /*jshint browserify: true */
 "use strict";
 
-const React = require('react');
-const _ = require('lodash');
-const Player = require('./Player.react');
+const React   = require('react'),
+          _   = require('lodash'),
+      Player  = require('./Player.react');
 
-const Leaderboard = React.createClass({
+let Leaderboard = React.createClass({
 
-  render: function () {
-    let key = 0;
-    const players = _.sortBy(this.props.players, function (player) {
-      return player.score;
-    }).reverse().map(function (player) {
-      return <Player name={player.name} score={player.score} winner={player.winner} key={key++} />;
-    });
+  render () {
+    let key = 0,
+    players = 
+      _.sortBy(this.props.players, plr => plr.score)
+      .reverse()
+      .map(plr => <Player player={plr} key={key++} />);
 
     return <ul className="leaderboard">{players}</ul>;
     
@@ -21,4 +20,13 @@ const Leaderboard = React.createClass({
 
 });
 
-module.exports = Leaderboard;
+let LeaderboardComponent = {
+
+  reload (players) {
+    React.render(<Leaderboard players={players} />,
+      document.getElementById('js-leaderboard'));
+  }
+
+};
+
+module.exports = LeaderboardComponent;

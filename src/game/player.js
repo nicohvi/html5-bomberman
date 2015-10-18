@@ -30,6 +30,16 @@ let Player = {
     return this;
   },
 
+  reset () {
+    this.alive = false;
+    this.score = 0;
+    this.cooldown = false;
+    this.moving = false;
+    this.direction = 'down';
+    this.diadAt = null;
+    this.lastBomb = null;
+  },
+
   move (dir) {
     this.moving = true;
     this.direction = dir;

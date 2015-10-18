@@ -1,21 +1,27 @@
 /*jshint browserify: true */
 "use strict";
 
-//var _ = require('lodash');
+let _width = null,
+    _height = null,
+    _tiles = null;
 
-let map = {
+let Map = {
   init (opts) {
-    this.width  = opts.width;
-    this.height = opts.height;
-    this.tiles  = opts.tiles;
+    _width  = opts.width;
+    _height = opts.height;
+    _tiles  = opts.tiles;
   },
 
- getTile (xCoord, yCoord) {
-    return this.tiles[yCoord * this.width + xCoord]; 
+  getTile (xCoord, yCoord) {
+    return _tiles[yCoord * _width + xCoord]; 
+  },
+
+  getBounds () {
+    return { width: _width, height: _height };
   },
 
   setTile (xCoord, yCoord, value) {
-    this.tiles[yCoord * this.width + xCoord] = value;
+    _tiles[yCoord * _width + xCoord] = value;
   },
 
   update (tiles) {
@@ -24,25 +30,4 @@ let map = {
 
 };
 
-module.exports = map;
-
-//function Map (data) {
-    //this.x = data.x,
-    //this.y = data.y,
-    //this.width = data.width;
-    //this.height = data.height;
-    //this.map = data.map;
-    //this.canvas = new Canvas(this);
-  //},
-
-  //getTile: function (x, y) {
-    //var index = (y * this.width) + x;
-    //return this.map[index]; 
-  //},
-
-  //updateTile: function (x, y, value) {
-    //var index = (y * this.width) + x;
-    //this.map = this.map.substr(0, index) + value + this.map.substr(index+1);
-  //}
-  
-//}
+module.exports = Map;

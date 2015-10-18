@@ -2,9 +2,20 @@
 "use strict";
 
 let Player = {
+  
   alive: true,
   winner: false,
   frame: 0,
+
+  init (opts) {
+    this.id = opts.id;
+    this.character = opts.character;
+    this.name = opts.name;
+    this.score = opts.score;
+
+    this.update(opts);
+    return this;
+  },
 
   update (options) {
     this.x = options.x;
@@ -12,6 +23,12 @@ let Player = {
     this.direction = options.direction;
     this.moving = options.moving;
     this.alive = options.alive;
+  },
+
+  spawn (x, y) {
+    this.x = x;
+    this.y = y;
+    this.alive = true;
   },
 
   updateScore (score) {
@@ -45,17 +62,15 @@ let Player = {
     this.alive = false;
     this.frame = 0;
   },
+
+  stop () {
+    this.moving = false;
+  }
 };
 
 let playerFactory = function (opts) {
   var player = Object.create(Player);
-  player.id = opts.id;
-  player.character = opts.character;
-  player.name = opts.name;
-  player.update(opts);
-  player.score = opts.score;
-
-  return player;
+  return player.init(opts);
 };
 
 module.exports = playerFactory;
