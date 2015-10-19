@@ -27,7 +27,7 @@ let Controller = {
   },
 
   powerUp () {
-    _socket.emit('power-up', { message: "BEKK" });
+    // HMMMMMM....
   }
 };
 
