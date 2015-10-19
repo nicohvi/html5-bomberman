@@ -10,7 +10,7 @@ let PlaystationCtrl = {
     _socket.on('connect', 
     () => {
       console.log('Connected to PS-controller');
-      onConnect(this);
+      onConnect(_socket);
     });
   }
 

@@ -56,7 +56,7 @@ let BombManager = {
     let horizontalTiles = map.getRowTiles(lib.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
     verticalTiles = map.getColumnTiles(lib.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
 
-    let tiles = this.filterTiles(horizontalTiles, bomb.strength).concat(this.filterTiles(verticalTiles));
+    let tiles = this.filterTiles(horizontalTiles, bomb.strength).concat(this.filterTiles(verticalTiles, bomb.strength));
     return tiles; 
   },
 

@@ -26,7 +26,6 @@ let Controller = {
     _socket.emit('place-bomb');
   },
 
-  // todo: PO
   powerUp () {
     _socket.emit('power-up', { message: "BEKK" });
   }

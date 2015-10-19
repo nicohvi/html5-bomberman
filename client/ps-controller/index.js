@@ -11,15 +11,7 @@ app.use(express.bodyParser());
 socket.on('connection', socket => {
   console.log('client connected');     
 
-  ctrl.on('left:move', function (data) {
-    console.log('moving left');
-    socket.emit('left', { left: data });
-  });
-
-  psController.on('right:move', function (data) {
-    console.log('moving right');
-    socket.emit('right', { right: data });
-  });
+  ctrl.on('dpadLeft:press', data => socket.emit('left'));
 
   // And so forth
   
