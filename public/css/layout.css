@@ -9,6 +9,11 @@ h1 { text-align: center; }
   position: absolute;
 }
 
+#canvas-container {
+  width: 800px;
+  margin: 0 auto;
+}
+
 canvas:first-of-type {
   box-shadow: 1px 1px 50px 10px rgba(0, 0, 0, .3);
 }

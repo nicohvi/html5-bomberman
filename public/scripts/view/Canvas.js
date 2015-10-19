@@ -162,7 +162,7 @@ let Canvas = {
   canvasGenerator (width, height) {
     const $canvas =   $('<canvas width="' +width+
                     '" height="' +height+ '"class="game-canvas" />');
-    $('body').append($canvas);
+    $('#canvas-container').append($canvas);
     return $canvas;
   },
 
