@@ -1,0 +1,15 @@
+{
+  "name": "Socketman-todo",
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "watchify js/app.js -t babelify -o js/bundle.js -v"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babelify": "^6.0.2",
+    "socket.io-client": "^0.9.17",
+    "watchify": "^3.1.1"
+  }
+}

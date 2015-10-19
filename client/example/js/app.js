@@ -2,7 +2,7 @@
 
 const Client = require('../../index');
 
-let client = Client('Navn');
+let client = Client('Nico');
 
 client.connect(controller => {
 

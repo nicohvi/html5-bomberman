@@ -56,7 +56,7 @@ let BombManager = {
     let horizontalTiles = map.getRowTiles(lib.range(bomb.x - bomb.strength, bomb.x + bomb.strength), bomb.y),
     verticalTiles = map.getColumnTiles(lib.range(bomb.y - bomb.strength, bomb.y + bomb.strength), bomb.x);
 
-    let tiles = this.filterTiles(horizontalTiles).concat(this.filterTiles(verticalTiles));
+    let tiles = this.filterTiles(horizontalTiles, bomb.strength).concat(this.filterTiles(verticalTiles));
     return tiles; 
   },
 
@@ -64,8 +64,8 @@ let BombManager = {
     return _.filter(tiles, tile => tile.value === Constants.TILE_BRICK);
   },
 
-  filterTiles (tiles) {
-    let paths = _.chunk(tiles, Constants.BOMB_STRENGTH+1),
+  filterTiles (tiles, bombStrength) {
+    let paths = _.chunk(tiles, bombStrength+1),
         result = [];
 
     // reverse so that we start from the blast zone.
