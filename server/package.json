@@ -1,12 +1,8 @@
 {
   "name": "Socketman",
   "version": "0.0.1",
-  "engines": {
-    "iojs": "^3.3.0"
-  },
   "scripts": {
-    "start": "node --harmony_arrow_functions --harmony_object_literals index.js",
-    "test": "node --harmony_arrow_functions --harmony_object_literals ./node_modules/gulp/bin/gulp watch"
+    "start": "node index.js"
   },
   "dependencies": {
     "express": "~3.3.8",
