@@ -1,19 +1,17 @@
-var express = require('express');
-
-var app = express();
-var server = require('http').Server(app);
-var socketio = require('socket.io').listen(server);
-
-var psController = require('./controller');
+const express = require('express'),
+  app = express(),
+  server = require('http').Server(app),
+  socketio = require('socket.io').listen(server),
+  dualshock = require('dualshock-controller'),
+  ctrl = dualshock({ config: 'dualshock4-generic-driver' }),
+  socket = socketio.of('/ps');
 
 app.use(express.bodyParser());
 
-var socket = socketio.of('/ps');
-
-socket.on('connection', function (socket) {
+socket.on('connection', socket => {
   console.log('client connected');     
 
-  psController.on('left:move', function (data) {
+  ctrl.on('left:move', function (data) {
     console.log('moving left');
     socket.emit('left', { left: data });
   });
@@ -22,6 +20,8 @@ socket.on('connection', function (socket) {
     console.log('moving right');
     socket.emit('right', { right: data });
   });
+
+  // And so forth
   
 });;
 

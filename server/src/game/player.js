@@ -16,6 +16,7 @@ let Player = {
     this.direction = 'down';
     this.diedAt = null;
     this.lastBomb = null;
+    this.powerUp = false;
     return this;
   },
 
@@ -93,6 +94,18 @@ let Player = {
   stopCooldown () {
     this.lastBomb = null;
     this.cooldown = false;
+  },
+
+  supercharge () {
+    this.powerUp = true;
+  },
+
+  poweredUp () {
+    if(this.powerUp) {
+      this.powerUp = false;
+      return true;
+    }
+    return false;
   }
 };
 

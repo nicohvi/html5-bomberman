@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "example": "browserify example/js/app.js -t babelify -o example/js/bundle.js -v"
+    "example": "browserify example/js/app.js -t babelify -o example/js/bundle.js -v",
+    "advanced": "browserify example/js/advanced.js -t babelify -o example/js/adv_bundle.js -v"
   },
   "author": "",
   "license": "ISC",

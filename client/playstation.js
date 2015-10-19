@@ -1,26 +1,24 @@
-var io = require('socket.io-client');
+const io = require('socket.io-client'),
+      url = 'http://localhost:5000/ps';
 
-class PlaystationController {
-  constructor() {
-    this.callbacks = {};
-  }
+let _socket = null;
+
+let PlaystationCtrl = {
 
   connect (onConnect) {
-    this.callbacks.onConnect = onConnect;
-
-    this.socket = io.connect('http://localhost:5000/ps');
-    this.setupListeners.call(this);       
+    _socket = io.connect(url);
+    _socket.on('connect', 
+    () => {
+      console.log('Connected to PS-controller');
+      onConnect(this);
+    });
   }
 
-  setupListeners () {
-    this.socket.on('connect', this.onConnect.bind(this));
-  }
-
-  onConnect () {
-    this.callbacks.onConnect(this.socket);
-    console.log('connected to PS-server');
-  }
   
 }
 
-module.exports = PlaystationController;
+function ControllerFactory () {
+  return Object.create(PlaystationCtrl);
+}
+
+module.exports = ControllerFactory;

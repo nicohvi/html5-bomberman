@@ -149,15 +149,24 @@ let Game = {
     return player.deltaMove(dx, dy);
   },
 
+  powerUp (playerId, data) {
+    let player = _players[playerId];
+
+    if(player.cooldown || !player.alive || _done || !_go ) return;
+
+    if(data.message === "BEKK") player.supercharge(); 
+  },
+
   placeBomb (playerId) {
     let player = _players[playerId];
 
     if(player.cooldown || !player.alive || _done || !_go ) return;
 
+    let multiplier = player.poweredUp() ? 2 : 1;
     let opts = {
       id: _bombId++,
       player: player,
-      strength: Constants.BOMB_STRENGTH,
+      strength: Constants.BOMB_STRENGTH * multiplier,
       time: _lastTick
     };
 

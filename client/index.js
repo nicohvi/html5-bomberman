@@ -27,8 +27,8 @@ let Controller = {
   },
 
   // todo: PO
-  powerup () {
-    _socket.emit('power-up');
+  powerUp () {
+    _socket.emit('power-up', { message: "BEKK" });
   }
 };
 
