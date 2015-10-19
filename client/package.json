@@ -1,10 +1,10 @@
 {
-  "name": "client",
+  "name": "Socketman-client",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "example": "watchify example/script/app.js -t babelify -o example/bundle/bundle.js -v"
+    "example": "browserify example/js/app.js -t babelify -o example/js/bundle.js -v"
   },
   "author": "",
   "license": "ISC",
@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "babelify": "^6.0.2",
-    "browserify": "^9.0.8",
+    "browserify": "^11.0.1",
     "watchify": "^3.1.1"
   }
 }
