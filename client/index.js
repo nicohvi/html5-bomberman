@@ -26,9 +26,6 @@ let Controller = {
     _socket.emit('place-bomb');
   },
 
-  powerUp () {
-    // HMMMMMM....
-  }
 };
 
 function ControllerFactory (socket) {

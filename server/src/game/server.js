@@ -74,7 +74,7 @@ let Server = {
       game.placeBomb(id);
     });
 
-    socket.on('power-up', data => game.powerUp(id, data));
+    socket.on('power-up', data => game.powerUp(id, data)); 
 
     socket.on('disconnect', () => {
       console.log('socket: ' +id+ ' disconnected');

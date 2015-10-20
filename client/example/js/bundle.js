@@ -72,11 +72,8 @@ var Controller = {
 
   bomb: function bomb() {
     _socket.emit('place-bomb');
-  },
-
-  powerUp: function powerUp() {
-    // HMMMMMM....
   }
+
 };
 
 function ControllerFactory(socket) {
