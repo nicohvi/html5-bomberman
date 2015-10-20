@@ -45,7 +45,7 @@ let Game = {
 
   startRound () {
     _go = true;
-    _timer = 200 * 60;
+    _timer = 5000 * 60;
     this.emit('game', { action: 'begin' });
   },
 
