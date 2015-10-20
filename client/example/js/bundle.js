@@ -7,11 +7,42 @@ var client = Client('Nico');
 
 client.connect(function (controller) {
 
-  var onKeyDown = function onKeyDown(event) {
-    // Gjør noe smart! :-)
+  function onKeyDown(event) {
+    switch (event.which) {
+
+      // up
+      case 38:
+        controller.move('up');
+        break;
+
+      // down
+      case 40:
+        controller.move('down');
+        break;
+
+      // left
+      case 37:
+        controller.move('left');
+        break;
+
+      // right
+      case 39:
+        controller.move('right');
+        break;
+
+      // space
+      case 32:
+        controller.bomb();
+        break;
+    }
+  };
+
+  function onKeyUp() {
+    controller.stop();
   };
 
   document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
 });
 
 },{"../../index":2}],2:[function(require,module,exports){
@@ -43,9 +74,8 @@ var Controller = {
     _socket.emit('place-bomb');
   },
 
-  // todo: PO
   powerUp: function powerUp() {
-    _socket.emit('power-up', { message: "BEKK" });
+    // HMMMMMM....
   }
 };
 
