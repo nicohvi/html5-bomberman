@@ -6,7 +6,6 @@ const server = require('./server'),
       port = 3000;
 
 server.get('/board', 'board');
-server.get('/player', 'player');
 
 server.listen(port);
 let io = socketServer.listen(server.httpServer);

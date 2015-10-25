@@ -1,11 +1,7 @@
-/*jslint node: true */
 "use strict";
 
-let lib = require('./lib/lib');
-
-let Bomb = {
-
-  init (opts) {
+class Bomb {
+  constructor (opts) {
     this.id  = opts.id;
     this.x   = lib.floor(opts.player.x);
     this.y   = lib.floor(opts.player.y);
@@ -14,14 +10,16 @@ let Bomb = {
     this.placedAt = opts.time;
     this.active = false;
     this.exploded = false;
-
-    return this;
   } 
+
+  activate () {
+    bomb.active = true;
+  }
+
+  explode () {
+    bomb.exploded = true;
+    return this;
+  }
 };
 
-let BombFactory = function (opts) {
-  var bomb = Object.create(Bomb);
-  return bomb.init(opts);
-};
-
-module.exports = BombFactory;
+module.exports = Bomb;

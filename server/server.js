@@ -3,9 +3,7 @@
 
 const express = require("express"),
       app = express(),
-      _server = require('http').Server(app),
-      lib = require('./src/lib/lib'),
-      EventEmitter = require('events').EventEmitter;
+      _server = require('http').Server(app);
 
 let server = {
   listen (customPort) {
@@ -25,10 +23,6 @@ server.get = (route, view) => {
     res.render(view); 
   });
 };
-
-
-// Monkey patching/extensions 
-lib.extend(EventEmitter);
 
 app.use(express.bodyParser());
 app.use(express.static(__dirname + "/public/"));

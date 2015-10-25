@@ -1,15 +1,11 @@
-/*jslint node: true */
 "use strict";
 
-let Tile = {};
-
-let tileFactory = function (x, y, value) {
-  let tile = Object.create(Tile);
-  tile.x = x;
-  tile.y = y;
-  tile.value = value;
-  
-  return tile;
+class Tile {
+  constructor (opts) {
+    this.x = opts.x;
+    this.y = opts.y;
+    this.value = opts.value;
+  }
 };
 
-module.exports = tileFactory;
+module.exports = Tile;

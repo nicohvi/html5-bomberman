@@ -1,19 +1,11 @@
 "use strict";
 
-let Round = {
-  init (opts) {
+class Round {
+  constructor (opts) {
     this.duration = opts.duration;
-    this.winner = null;
-    this.loser = null;
     this.start = opts.start
-
-    return this;
+    this.winner = null;
   }
 };
 
-let roundFactory = (opts) {
-  let round = Object.create(Round);
-  return round.init(opts);
-};
-
-module.exports = roundFactory;
+module.exports = Round

@@ -1,118 +1,85 @@
-/*jslint node: true */
 "use strict";
 
-let _ = require('lodash');
+const _ = require('lodash'),
+  Tile  = require('./tile'),
+  C = require('./constants'),
+  MapGenerator = require('./mapGenerator');
 
-let Tile  = require('./tile');
-let lib   = require('./lib/lib');
-const Constants = require('./constants');
+let _width = null,
+    _height = null,
+    _map = null,
+    _dirtyTiles = [];
 
-let MapGenerator = {
-  init (width, height) {
-    this.width = width;
-    this.height = height;
-    this.map = _.fill(new Array(this.width * this.height), 0);
-    return this;
-  },
+function checkBounds (x, y) {
+  return (x <= _width && x >= 0) || (y <= _height && y >= 0);
+}
 
-  generateMap () {
-    _.times(this.height, function (yCoord) {
-      _.times(this.width, function (xCoord) {
-        // Wall test
-        if(xCoord === 0 || xCoord === this.width - 1 || yCoord === 0 || yCoord === this.height - 1 ) {
-          this.setTile(xCoord, yCoord, Constants.TILE_SOLID);
-        }
-        // All even tiles are solid
-        else if (xCoord % 2 === 0 && yCoord % 2 === 0){
-          this.setTile(xCoord, yCoord, Constants.TILE_SOLID);
-        }
-        // Randomize the bricks
-        else if (lib.floor(_.random(9) === 0)) {
-          this.setTile(xCoord, yCoord, Constants.TILE_BRICK);
-        }
-      }.bind(this));
-    }.bind(this));
+function setTile (tile, newValue) {
+  let value = newValue || tile.value;
+  _map[tile.y * _width + tile.x] = value;
+}
 
-  return this.map;
-  },
+function getTile (x, y) {
+  if(!checkBounds(x, y)) return;
+  
+  x = Math.floor(x);
+  y = Math.floor(y);
 
-  setTile (xCoord, yCoord, value) {
-    this.map[yCoord * this.width + xCoord] = value;
-  },
-
+  return _map[y * _width + x];
 };
 
-let mapGeneratorFactory = function (widht, height) {
-  let mapGenerator = Object.create(MapGenerator);
-  return mapGenerator.init(widht, height);
-};
-
-let GameMap = {
-  init (opts) {
+module.exports = {
+  generate (opts) {
     opts = opts || {};
 
-    this.width = opts.width || Constants.MAP_WIDTH;
-    this.height = opts.height || Constants.MAP_HEIGHT;
+    _width  = opts.width || C.MAP_WIDTH;
+    _height = opts.height || C.MAP_HEIGHT;
 
-    this.generator = mapGeneratorFactory(this.width, this.height);
-    this.tiles = this.generator.generateMap();
-
-    return this;
+    _map = MapGenerator.generate(_width, _height);
   },
 
-  getTile (xCoord, yCoord) {
-    if(this.invalidValues(xCoord, yCoord)) { return -1; }
-    
-    let x = lib.floor(xCoord),
-        y = lib.floor(yCoord);
-
-    return this.tiles[y * this.width + x];
+  getXTiles (xRange, y) {
+    return xRange.map(x => getTile(x, y));
   },
 
-  getRowTiles (xRange, yCoord) {
-    return _.map(xRange, function (xCoord) { 
-      return Tile(xCoord, yCoord, this.getTile(xCoord, yCoord));
-    }.bind(this));
+  getYTiles (yRange, xCoord) {
+    return yRange.map(y => getTile(x, y));
   },
 
-  getColumnTiles (yRange, xCoord) {
-    return _.map(yRange, function (yCoord) { 
-      return Tile(xCoord, yCoord, this.getTile(xCoord, yCoord));
-    }.bind(this));
+  update () {
+    if(_dirtyTiles.length === 0) return; 
+
+    let newTiles = _dirtyTiles
+      .filter(tile => checkBounds(tile.x, tile.y))
+      .forEach(tile => setTile(tile, C.TILE_EMPTY))
+      .map(tile => getTile(tile.x, tile.y));
+
+    Game.emit('map', { action: 'update', tiles: newTiles });
   },
 
-  updateMap (tiles) {
-    _.forEach(tiles, function (tile) {
-      this.setTile(tile.x, tile.y, Constants.TILE_EMPTY);
-    }.bind(this));
-  },
-
-  setTile (xCoord, yCoord, value) {
-    if(this.invalidValues(xCoord, yCoord)) { return -1; }
-    this.tiles[yCoord * this.width + xCoord] = value;
+  setDirtyTiles (tiles) {
+    _dirtyTiles = tiles
+    .filter(tile => tile.value === C.TILE_BRICK);
   },
 
   getValidSpawnLocation () {
     let valid = false,
             x = 0,
-            y = 0;
-   
+            y = 0,
+        cand  = null;
+  
+    // TODO: Timeout
     while(!valid) {
-      x = lib.floor(_.random(0, this.width));
-      y = lib.floor(_.random(0, this.height));
-      valid = this.getTile(x, y) === Constants.TILE_EMPTY;
+      x = Math.floor(_.random(0, _width));
+      y = Math.floor(_.random(0, _height));
+      cand = this.getTile(x, y);
+      valid = cand.value === C.TILE_EMPTY;
     } 
-    return { x: x, y: y }; 
+    return cand;
   },
 
-  invalidValues (x, y) {
-    return (this.width <= x && x <= 0) || (this.height <= y && y <= 0);
+  get () {
+    return _map;
   }
-};
 
-let mapFactory = function (opts) {
-  let map = Object.create(GameMap);
-  return map.init(opts);
 };
-
-module.exports = mapFactory;

@@ -1,10 +1,9 @@
-/*jslint node: true */
 "use strict";
 
-const _ = require('lodash');
+const _ = require('lodash'),
+      Game = require('./game');
 
-let game = require('./game')(),
-    views = {},
+let views = {},
     viewSocket = null,
     playerSocket = null,
     viewId = 1,
@@ -21,12 +20,12 @@ let Server = {
     playerSocket = io.of('/game');
     playerSocket.on('connection', this.onPlayerConnection.bind(this));
    
-    game.init();
+    Game.setup();
     this.setupGameListeners();
   },
 
   setupGameListeners: function () {
-    game.onMany(['game', 'player', 'bomb', 'flame', 'map', 'pong'],
+    Game.onMany(['game', 'player', 'bomb', 'flame', 'map', 'pong'],
       this.viewUpdate.bind(this));
   },
   
@@ -57,28 +56,23 @@ let Server = {
     
     socket.on('join-game', data => {
       id = playerId++; 
-      console.log('player ' +data.name+ ' joining the game with id: '+ id);
-      game.addPlayer(_.assign({ id: id }, data));
-      socket.emit('joined-game', { id: id });
+      game.player(_.assign({ id: id }, data), 'ADD');
     });
     
     socket.on('request-move', data => {
-      game.movePlayer(_.assign({ id: id }, data));
+      game.player(_.assign({ id: id }, data), 'MOV');
     });
 
     socket.on('stop-move', () => {
-      game.stopPlayer(id);
+      game.player({ id: id }, 'STP');
     });
 
     socket.on('place-bomb', () => {
-      game.placeBomb(id);
+      game.player({ id: id }, 'BMB');
     });
 
-    socket.on('power-up', data => game.powerUp(id, data)); 
-
     socket.on('disconnect', () => {
-      console.log('socket: ' +id+ ' disconnected');
-      game.removePlayer(id); 
+      game.player({ id: id }, 'DEL');
     });
   },
 

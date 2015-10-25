@@ -2,7 +2,7 @@
 "use strict";
 
 const io    = require('socket.io-client'),
-  Game      = require('./Game'),
+  Game      = require('./game'),
   B         = require('baconjs'),
   events    = [ 'init', 'game', 'player', 'bomb', 'flame', 'map', 'pong' ],
   handlers  = [ Game.init, Game.event, Game.playerUpdate, Game.bombUpdate,

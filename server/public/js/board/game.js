@@ -3,11 +3,11 @@
 
 const _ = require('lodash'),
   Player  = require('./player'),
-  Bomb    = require('./Bomb'),
-  Flame   = require('./Flame');
+  Bomb    = require('./bomb'),
+  Flame   = require('./flame');
 
-let Map         = require('./Map'),
-    Canvas      = require('./Canvas'), 
+let Map         = require('./map'),
+    Canvas      = require('./canvas'), 
     Leaderboard = require('../components/leaderboard.react'),
     Timer       = require('../components/Timer.react'),
     _running    = false,

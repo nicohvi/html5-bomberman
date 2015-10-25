@@ -1,37 +1,30 @@
-/*jslint node: true */
 "use strict";
 
-const Constants = require('./constants');
+const C = require('./constants');
 
-let Player = {
+class Player {
 
-  init (opts) {
+  constructor (opts) {
     this.id = opts.id;
     this.name = opts.name;
-    this.character = 'joe';
-    this.alive = false;
-    this.score = 0;
-    this.cooldown = false;
-    this.moving = false;
-    this.direction = 'down';
-    this.diedAt = null;
-    this.lastBomb = null;
-    this.powerUp = false;
-    return this;
-  },
+    this.character = opts.character;
+    this.defaults();
+  }
 
   spawn (loc) {
     this.x = loc.x;
     this.y = loc.y;
     this.alive = true;
-  },
+
+    return this;
+  }
 
   stop () {
     this.moving = false;
     return this;
-  },
+  }
 
-  reset () {
+  defaults () {
     this.alive = false;
     this.score = 0;
     this.cooldown = false;
@@ -39,79 +32,66 @@ let Player = {
     this.direction = 'down';
     this.diadAt = null;
     this.lastBomb = null;
-  },
+    this.powerUp = false;
+  }
 
   move (dir) {
     this.moving = true;
     this.direction = dir;
     return this;
-  },
+  }
 
-  // TODO: acceleration
-  getAttemptedMove () {
-    var dx = 0,
+  getDeltaMove () {
+    // TODO: acceleration
+    let dx = 0,
         dy = 0;
 
     switch(this.direction) {
       case 'left':
-        dx -= Constants.MOVE_AMOUNT;
+        dx -= C.MOVE_AMOUNT;
         break;
       case 'right':
-        dx += Constants.MOVE_AMOUNT;
+        dx += C.MOVE_AMOUNT;
         break;
       case 'up':
-        dy -= Constants.MOVE_AMOUNT;
+        dy -= C.MOVE_AMOUNT;
         break;
       case 'down':
-        dy += Constants.MOVE_AMOUNT;
+        dy += C.MOVE_AMOUNT;
         break;
     }
 
     return { dx: dx, dy: dy };
-  },
+  }
 
   deltaMove (dx, dy) {
-    if(dx === 0 && dy === 0) { this.moving = false; }
     this.x += dx;
     this.y += dy;
+
     return this;
-  },
+  }
 
   die (time) {
     this.alive = false;
     this.diedAt = time;
-  },
+
+    return this;
+  }
 
   updateScore (diff) {
     this.score += diff;
-  },
+  }
 
-  setCooldown (time) {
+  placeBomb (time) {
     this.lastBomb = time;
     this.cooldown = true;
-  },
+  }
 
-  stopCooldown () {
+  ready () {
     this.lastBomb = null;
     this.cooldown = false;
-  },
-
-  supercharge () {
-    this.powerUp = true;
-  },
-
-  poweredUp () {
-    if(this.powerUp) {
-      this.powerUp = false;
-      return true;
-    }
-    return false;
   }
+
 };
 
-let playerFactory = function playerFactory (data) {
-  var player = Object.create(Player);
-  return player.init(data);
-};
-
-module.exports = playerFactory;
+module.exports = Player;

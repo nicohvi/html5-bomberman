@@ -4,8 +4,7 @@
   "description": "Socket.io bomberman",
   "main": "/scripts/app.js",
   "scripts": {
-    "view": "watchify scripts/view/app.js -t babelify -t reactify -o js/view.js -v ",
-    "player": "watchify scripts/player/app.js -t babelify -o js/player.js -v"
+    "dev": "watchify js/board/app.js -t babelify -t reactify -o js/bundle.js -v "
   },
   "dependencies": {
     "socket.io-client": "^0.9.17",
