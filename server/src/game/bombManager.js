@@ -4,11 +4,16 @@ const _     = require('lodash'),
       Bomb  = require('./bomb'),
       C     = require('./constants'),
       lib   = require('./lib'),
+      Emitter = require('./emitter'),
       FlameManager = require('./flameManager');
 
-// Private
 let _bombs = {},
-    _bombId = 0;
+    _bombId = 0,
+    _emitter = new Emitter();
+
+function emit (payload) {
+  _emitter.emit('bomb', payload);
+}
 
 function add (bomb) {
   _bombs[bomb.id] = bomb;
@@ -59,7 +64,7 @@ function boom (bomb) {
   Map.setDirtyTiles(tiles);
   FlameManager.spawn(tiles, bomb.id);
 
-  Game.emit('bomb', { action: 'explode', bomb: bomb });
+  emit({ action: 'explode', bomb: bomb });
   chainBombs(bomb.id, tiles);
 }
 
@@ -101,17 +106,21 @@ module.exports = {
     console.log('placing bomb at: ' +bomb.x+ ", " +bomb.y); 
 
     add(bomb);
-    Game.emit('bomb', { action: 'place', bomb: bomb });
+    emit({ action: 'place', bomb: bomb });
   },
    
   clear () {
     _bombs = {};
-    Game.emit('bomb', { action: 'clear' });
+    emit({ action: 'clear' });
   },
 
   hasBomb (x, y) {
     return !_.isEmpty(
       _.filter(bombs, bomb => bomb.x === x && bomb.y === y && bomb.active));
   },
+
+  onAny (fn) {
+    _emitter.onAny(fn);
+  }
 
 };

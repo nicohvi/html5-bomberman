@@ -41,12 +41,11 @@ let Game = {
     _bombs = {};
     _flames = {};
     Timer.stop();
-
-    let state = data.game;
     _lastTick = getTicks();
-    getPlayers(state.players);
-    Map.init(state.map);
-    Canvas.init(state.map.width, state.map.height);
+    getPlayers(data.game.players);
+
+    Map.init(data.game.map);
+    Canvas.init(data.game.map);
     Leaderboard.reload(_players);
 
     this.update();

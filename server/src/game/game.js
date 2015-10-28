@@ -2,9 +2,7 @@
 
 const _ = require('lodash'),
   B = require('baconjs').Bacon,
-  ext = require('../../event'),
-  EventEmitter = ext(require('events').EventEmitter),
-  emitter = new EventEmitter(),
+  Emitter = require('./emitter'),
   lib = require('./lib'),
   Player  = require('./player'),
   Bomb    = require('./bomb'),
@@ -13,12 +11,14 @@ const _ = require('lodash'),
   C       = require('./constants'),
   CollisionDetector = require('./collisionDetector'),
   BombManager       = require('./bombManager'),
-  PlayerManager     = require('./playerManager');
+  PlayerManager     = require('./playerManager'),
+  FlameManager      = require('./flameManager');
 
 let _go = false,
     _countdown = false,
     _lastTick = null,
-    _timer = null;
+    _timer = null,
+    _emitter = new Emitter();
 
 function update () {
   let now = tick();
@@ -44,7 +44,7 @@ function updateTimer () {
     gameOver();
   else if(_timer <= C.ROUND_TIME && !_countdown) {
     _countdown = true;
-    Game.emit('game', { action: 'countdown' });
+    emit('game', { action: 'countdown' });
   }
 }
 
@@ -57,7 +57,7 @@ function gameOver() {
   FlameManager.clear();
   BombManager.clear();
 
-  Game.emit('game', { action: 'end', winner: winner });
+  emit('game', { action: 'end', winner: winner });
 }
 
 function direction (x) {
@@ -75,14 +75,23 @@ function tick () {
   return new Date().getTime();
 }
 
+function emit (msg, payload) {
+  _emitter.emit(msg, payload);
+}
+
 module.exports = {
 
   setup () {
     Map.generate();
-    
+
+    PlayerManager.onAny(emit);
+    BombManager.onAny(emit);
+    FlameManager.onAny(emit);
+
     update();
     // 60 Hz: 1/60 = 0.167 ~ 17 ms
     setInterval(update, 17);
+    emit('game', { action: 'lol' });
   },
 
   start () {
@@ -90,7 +99,7 @@ module.exports = {
 
     // 5 minutes
     _timer = 300000;
-    this.emit('game', { action: 'begin' });
+    emit('game', { action: 'begin' });
   },
 
   reset () {
@@ -106,30 +115,30 @@ module.exports = {
   },
 
   state () { 
-    return { players: _players, map: Map.get() };
+    return { players: PlayerManager.players(), map: Map.get() };
   },
 
   player (data, action) {
-    if(action === 'BMB') 
-      data.callback = BombManager.placeBomb.bind(null, data, _lastTick);
-
-    PlayerManager.perform(action, data);
+    return new Promise((resolve, reject) => {
+    PlayerManager.perform(action, data).then(plr => {
+      if(action === 'BMB') 
+        BombManager.placeBomb.bind(null, data, _lastTick);
+      resolve(plr);
+    });
+    });
   },
 
   lastTick () {
     return _lastTick;
   },
   
-  on (event, fn) {
-    emitter.on(event, fn);
-  },
-
   onMany (events, fn) {
-    emitter.onMany(events, fn);
+    _emitter.onMany(events, fn);
   },
 
-  emit(msg, payload) {
-    emitter.emit(msg, payload);
+  on (event, fn) {
+    _emitter.on(event, fn);
   }
+
 };
 

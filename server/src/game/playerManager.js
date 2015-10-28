@@ -2,7 +2,11 @@
 
 const Game  = require('./game'),
       lib   = require('./lib'),
-      C = require('./constants'),
+      _     = require('lodash'),
+      Emitter = require('./emitter'),
+      C       = require('./constants'),
+      Player  = require('./player'),
+      Map     = require('./map'),
       _actions = {
         'ADD':  add,
         'DEL':  remove,
@@ -12,15 +16,20 @@ const Game  = require('./game'),
         };
 
 let _players = {},
-    _winner = null;
+    _winner = null,
+    _emitter = new Emitter();
+
+function emit (payload) {
+  _emitter.emit('player', payload); 
+}
 
 function add (data) {
   let plr = new Player(data);
   _players[plr.id] = plr;
 
-  setTimeout(() => spawnPlayer(plr), 1000);
-
-  return { action: 'join', player: plr };
+  setTimeout(() => spawn(plr), C.SPAWN_TIME);
+  
+  return plr;
 }
 
 function score (player, killer, suicide) {
@@ -33,7 +42,7 @@ function score (player, killer, suicide) {
     plrToUpdate = killer;
   }
   
-  Game.emit('player', { action: 'score', player: plrToUpdate });
+  emit({ action: 'score', player: plrToUpdate });
 }
 
 function checkWinner () {
@@ -43,15 +52,16 @@ function checkWinner () {
 function remove (data) {
   console.log('Removing player with id: ' +data.id);
   delete _players[data.id];
-  return { action: 'leave', id: data.id };
+  emit({ action: 'leave', id: data.id });
 }
 
 // TODO: Decorate with Active and NOT NULL
 
 function setMoving (data) {
   let plr = _players[data.id];
+
   if(!plr || !plr.alive) 
-    return { action: 'error', message: 'Player is dead' };
+    return plr;
 
   let dir = data.dir;
   return { action: 'update', player: plr.move(dir) };
@@ -61,16 +71,18 @@ function stop (data) {
   let plr = _players[data.id];
   
   if(!plr || !plr.alive) 
-    return { action: 'error', message: 'Player is dead' };
+    return plr;
 
-  return { action: 'update', player: plr.stop() };
+  emit({action: 'update', player: plr.stop()});
+
+  return plr;
 }
 
 function bomb (data) {
   let plr = _players[data.id];
 
   if(!plr || !plr.alive || plr.cooldown)
-    return { action: 'error' };
+    return plr;
 
   plr.setCooldown(Game.lastTick);
 }
@@ -78,10 +90,10 @@ function bomb (data) {
 function spawn (plr) {
   let loc = Map.getValidSpawnLocation();
   
-  console.log('Spawning player at: '+plr.x+ ', '+plr.y);
-  player.spawn(loc);
+  console.log('Spawning player at: '+loc.x+ ', '+loc.y);
+  plr.spawn(loc);
   
-  Game.emit('player', { action: 'spawn', player: plr });
+  emit({action: 'spawn', player: plr });
 }
 
 function move (plr, delta) {
@@ -96,10 +108,6 @@ function move (plr, delta) {
 
 module.exports = {
 
-  getPlayer (id) {
-    return _players[id];
-  },
-
   players () {
     return _players;
   },
@@ -107,13 +115,12 @@ module.exports = {
   perform (action, data) {
     if(!_actions[action]) 
       return console.log('Invalid player action called');
-    let payload = _actions[action].call(this, data);
-    if(payload) Game.emit('player', payload);
-    if(data.callback) data.callback.call(null, data);
+    let plr = _actions[action].call(this, data);
+    return new Promise(resolve => resolve(plr));
   },
 
   update (tick) {
-    const plrs = lib.stream(_plrs),
+    const plrs = lib.stream(_players),
           alive = plrs.filter(plr => plr.alive),
           dead  = plrs.filter(plr => !plr.alive);
 
@@ -137,7 +144,7 @@ module.exports = {
       let delta = plr.getDeltaMove();
       return move(plr, delta)
     })
-    .onValue(plr => Game.emit('player', { action: 'update', player: plr }));
+    .onValue(plr => emit({ action: 'update', player: plr }));
   },
 
   kill (player, flame) {
@@ -147,19 +154,23 @@ module.exports = {
     updateScore(player, killer, suicide);
     player.die(Game.lastTick());
 
-    Game.emit('player', { action: 'die', 
-      player: player, killer: killer, suicide: suicide });
+    emit({ action: die, player: player, killer: killer, suicide: suicide });
   },
 
-  winner () {
-    return _winner || _.max(_players, plr => plr.score);
-  },
+  //winner () {
+    //return _winner || checkWinner();
+  //},
 
   reset () {
     _.each(_players, plr => {
       plr.reset();
       spawnPlayer(plr);
     });
+  },
+
+  onAny (fn) {
+    _emitter.onAny(fn);
   }
+
 };
   

@@ -2,11 +2,18 @@
 
 const Flame = require('./flame'),
       lib   = require('./lib'),
+      _     = require('lodash'),
       C     = require('./constants'),
+      Emitter = require('./emitter'),
       PlayerManager = require('./playerManager');
 
 let _flames = {},
-    _flameId = 0;
+    _flameId = 0,
+    _emitter = new Emitter();
+
+function emit (payload) {
+  _emitter.emit('flame', payload);
+}
 
 function add (flame) {
   _flames[flame.id] = flame;
@@ -40,7 +47,7 @@ module.exports = {
 
     newFlames.forEach(flm => _flames[flm.id] = flm);
 
-    Game.emit('flame', { action: 'spawn', flames: newFlames });
+    emit({ action: 'spawn', flames: newFlames });
   },
 
   update (tick) {
@@ -55,14 +62,18 @@ module.exports = {
 
     if(oldFlames.length === 0) return;
     
-    Game.emit('flame', { action: 'die', flames: oldFlames });
+    emit({ action: 'die', flames: oldFlames });
   },
 
   clear () {
     if(_.isEmpty(_flames)) return;
 
-    Game.emit('flame', { action: 'die', flames: _flames });
+    emit({ action: 'die', flames: _flames });
     _flames = {};
+  },
+
+  onAny (fn) {
+    _emitter.onAny(fn);
   }
 
 };

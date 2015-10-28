@@ -19,15 +19,6 @@ function setTile (tile, newValue) {
   _map[tile.y * _width + tile.x] = value;
 }
 
-function getTile (x, y) {
-  if(!checkBounds(x, y)) return;
-  
-  x = Math.floor(x);
-  y = Math.floor(y);
-
-  return _map[y * _width + x];
-};
-
 module.exports = {
   generate (opts) {
     opts = opts || {};
@@ -76,6 +67,15 @@ module.exports = {
       valid = cand.value === C.TILE_EMPTY;
     } 
     return cand;
+  },
+
+  getTile (x, y) {
+    if(!checkBounds(x, y)) return;
+    
+    x = Math.floor(x);
+    y = Math.floor(y);
+
+    return _map[y * _width + x];
   },
 
   get () {

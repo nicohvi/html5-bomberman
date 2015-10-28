@@ -1,62 +1,44 @@
 "use strict";
 
-const io  = require('socket.io-client'),
-      url = 'http://localhost:3000/game';
+const io  = require('socket.io-client');
+const url = 'http://localhost:3000/game';
 
-let _socket = null,
-    _name = null;
+let _name = null;
+let _id = null;
+let _socket = null;
 
-let Controller = {
+function setupListeners () {
+  _socket.on('connect', 
+    () => _socket.emit('join-game', { name: _name }));
 
-  init (socket) {
-    _socket = socket;
-    return this;
-  },
+  return new Promise((resolve, reject) => {
+    _socket.on('player', data => {
+      debugger
+      console.log('promise is not resolved');
+      _id = data.id;
+      resolve();
+    });
+  });
+}
 
-  move (dir) {
-    console.log('moving ' +_name+ ' in direction: ' +dir);
-    _socket.emit('request-move', { dir: dir });
-  },
-
-  stop () {
-    _socket.emit('stop-move');
-  },
-
-  bomb () {
-    _socket.emit('place-bomb');
-  },
-
-};
-
-function ControllerFactory (socket) {
-  let ctrl = Object.create(Controller);
-  return ctrl.init(socket);
-};
-
-let Client = {
+module.exports = {
 
   init (name) {
     _name = name;
     return this;
   },
 
-  connect (onConnect) {
+  connect () {
     _socket = io.connect(url);
-    _socket.on('connect', 
-      () => _socket.emit('join-game', { name: _name })
-    );
-    _socket.on('joined-game', 
-      () => {
-        let ctrl = ControllerFactory(_socket);
-        onConnect(ctrl);
+    return new Promise((resolve, reject) => {
+      setupListeners()
+      .then( () => resolve(this));
     });
+  },
+
+  state () {
+    return { id: _id, name: _name }; 
   }
+  
 };
-
-function ClientFactory (name) {
-  let client = Object.create(Client);
-  return client.init(name);
-};
-
-module.exports = ClientFactory;
 

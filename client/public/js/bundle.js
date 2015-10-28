@@ -1,107 +1,53 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 
-var Client = require('../../index');
+var io = require('socket.io-client');
+var url = 'http://localhost:3000/game';
 
-var client = Client('Navn');
+var _name = null;
+var _id = null;
+var _socket = null;
 
-client.connect(function (controller) {
+function setupListeners() {
+  _socket.on('connect', function () {
+    return _socket.emit('join-game', { name: _name });
+  });
 
-  var onKeyDown = function onKeyDown(event) {
-    switch (event.which) {
-      // down
-      case 40:
-        controller.move('down');
-        break;
-      // right
-      case 39:
-        controller.move('right');
-        break;
-      // up
-      case 38:
-        controller.move('up');
-        break;
-      // left
-      case 37:
-        controller.move('left');
-        break;
-      // space
-      case 32:
-        controller.bomb();
-        break;
-    }
-  };
+  return new Promise(function (resolve, reject) {
+    _socket.on('player', function (data) {
+      debugger;
+      console.log('promise is not resolved');
+      _id = data.id;
+      resolve();
+    });
+  });
+}
 
-  document.addEventListener('keydown', onKeyDown);
-});
-
-},{"../../index":2}],2:[function(require,module,exports){
-"use strict";
-
-var io = require('socket.io-client'),
-    url = 'http://localhost:3000/game';
-
-var _socket = null,
-    _name = null;
-
-var Controller = {
-
-  init: function init(socket) {
-    _socket = socket;
-    return this;
-  },
-
-  move: function move(dir) {
-    console.log('moving ' + _name + ' in direction: ' + dir);
-    _socket.emit('request-move', { dir: dir });
-  },
-
-  stop: function stop() {
-    _socket.emit('stop-move');
-  },
-
-  bomb: function bomb() {
-    _socket.emit('place-bomb');
-  },
-
-  // todo: PO
-  powerup: function powerup() {
-    _socket.emit('power-up');
-  }
-};
-
-function ControllerFactory(socket) {
-  var ctrl = Object.create(Controller);
-  return ctrl.init(socket);
-};
-
-var Client = {
+module.exports = {
 
   init: function init(name) {
     _name = name;
     return this;
   },
 
-  connect: function connect(onConnect) {
+  connect: function connect() {
+    var _this = this;
+
     _socket = io.connect(url);
-    _socket.on('connect', function () {
-      return _socket.emit('join-game', { name: _name });
+    return new Promise(function (resolve, reject) {
+      setupListeners().then(function () {
+        return resolve(_this);
+      });
     });
-    _socket.on('joined-game', function () {
-      var ctrl = ControllerFactory(_socket);
-      onConnect(ctrl);
-    });
+  },
+
+  state: function state() {
+    return { id: _id, name: _name };
   }
+
 };
 
-function ClientFactory(name) {
-  var client = Object.create(Client);
-  return client.init(name);
-};
-
-module.exports = ClientFactory;
-
-},{"socket.io-client":3}],3:[function(require,module,exports){
+},{"socket.io-client":2}],2:[function(require,module,exports){
 /*! Socket.IO.js build:0.9.17, development. Copyright(c) 2011 LearnBoost <dev@learnboost.com> MIT Licensed */
 
 var io = ('undefined' === typeof module ? {} : module.exports);
@@ -3975,4 +3921,14 @@ if (typeof define === "function" && define.amd) {
   define([], function () { return io; });
 }
 })();
-},{}]},{},[1]);
+},{}],3:[function(require,module,exports){
+"use strict";
+
+var Client = require('../../index');
+
+Client.init('Testman').connect().then(function (client) {
+  console.log('client connected');
+  console.log(client.state());
+});
+
+},{"../../index":1}]},{},[3]);

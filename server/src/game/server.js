@@ -4,85 +4,81 @@ const _ = require('lodash'),
       Game = require('./game');
 
 let views = {},
-    viewSocket = null,
-    playerSocket = null,
-    viewId = 1,
-    playerId = viewId;
+    players = {},
+    viewId = 0;
+
+function setupListeners () {
+  Game.on('player', update);
+  Game.on('game', update);
+}
+
+function update (type, payload) {
+  _.values(views).concat(_.values(players))
+  .map(socket => socket.emit(type, payload));
+}
+
+function viewJoined (socket) {
+  console.log('view connected');
+  
+  let id = viewId++;
+  views[id] = socket;
+
+  socket.emit('init', { game: Game.state() });
+
+  socket.on('disconnect', () => {
+    console.log('view disconnected'); 
+    delete views[id];
+  }); 
+}
+
+function playerJoined (socket) {
+  console.log('player connected');
+
+  socket.on('join-game', data => {
+    Game.player(data, 'ADD').then(plr => {
+      players[plr.id] = socket;
+      update('player', { action: 'join', id: plr.id });
+  })});
+}
 
 let Server = {
   init (io) {
 
     io.set('log level', 1);
 
-    viewSocket = io.of('/view');
-    viewSocket.on('connection', this.onViewConnection.bind(this));
-
-    playerSocket = io.of('/game');
-    playerSocket.on('connection', this.onPlayerConnection.bind(this));
+    io.of('/view').on('connection', viewJoined);
+    io.of('/game').on('connection', playerJoined);
    
+    setupListeners();
     Game.setup();
-    this.setupGameListeners();
   },
 
-  setupGameListeners: function () {
-    Game.onMany(['game', 'player', 'bomb', 'flame', 'map', 'pong'],
-      this.viewUpdate.bind(this));
-  },
-  
-  onViewConnection: function (socket) {
-    console.log('view connected');
-
-    let id = viewId++;
-    views[id] = socket;
-
-    socket.emit('init', { game: game.state() } );
-
-    socket.on('disconnect', () => { 
-      console.log('disconnect');
-      delete views[id];
-    });
-
-    socket.on('start-round', game.startRound);
-    socket.on('end-round', game.endRound); 
-    socket.on('reset', () => {
-      game.reset();
-      socket.emit('init', { game: game.state() });
-    });
-  },
-
-  onPlayerConnection: function (socket) {
-    console.log('player connected');
-    let id = -1;
+    //socket.on('join-game', data => Game.player(data, 'ADD'));
     
-    socket.on('join-game', data => {
-      id = playerId++; 
-      game.player(_.assign({ id: id }, data), 'ADD');
-    });
-    
-    socket.on('request-move', data => {
-      game.player(_.assign({ id: id }, data), 'MOV');
-    });
+    //socket.on('request-move', data => {
+      //Game.player(_.assign({ id: id }, data), 'MOV');
+    //});
 
-    socket.on('stop-move', () => {
-      game.player({ id: id }, 'STP');
-    });
+    //socket.on('stop-move', () => {
+      //Game.player({ id: id }, 'STP');
+    //});
 
-    socket.on('place-bomb', () => {
-      game.player({ id: id }, 'BMB');
-    });
+    //socket.on('place-bomb', () => {
+      //Game.player({ id: id }, 'BMB');
+    //});
 
-    socket.on('disconnect', () => {
-      game.player({ id: id }, 'DEL');
-    });
-  },
+    //socket.on('disconnect', () => {
+      //Game.player({ id: id }, 'DEL');
+    //});
+  //},
 
-  viewUpdate: function (event, payload) {
-    if(payload.action !== 'update')
-      console.log('called event: ' +event);
-    _.forEach(views, function (view) {
-      view.emit(event, payload);
-   });
-  },
+  //viewUpdate: function (event, payload) {
+    //if(payload.action !== 'update')
+      //console.log('called event: ' +event);
+    //_.forEach(views, function (view) {
+      //view.emit(event, payload);
+   //});
+  //},
 
 };
 
