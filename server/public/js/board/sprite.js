@@ -2,19 +2,21 @@
 const _spriteDir  = '../../sprites/',
       C           = require('./constants');
 
-function loadSprite (path, callback) {
-  let sprite = new Image();
-  sprite.src = _spriteDir + path;
-  sprite.onload = callback;
-  return sprite;
+function loadSprite (path, sprite) {
+  let img = new Image();
+  img.src = _spriteDir + path;
+  img.onload = function () {
+    sprite.loaded = true; 
+  };
+  return img;
 }
 
 class Sprite {
   constructor (src, charFlag) {
-    this.image = loadSprite(src, () => this.loaded = true);
+    this.loaded = false;
+    this.image = loadSprite(src, this);
     this.width = charFlag ? C.CHAR_WIDTH : C.SQUARE_SIZE;
     this.height = charFlag ? C.CHAR_HEIGHT : C.SQUARE_SIZE;
-    this.loaded = false;
   }
 }
 

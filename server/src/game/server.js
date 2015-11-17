@@ -19,7 +19,6 @@ function update (type, payload) {
 
 function viewJoined (socket) {
   console.log('view connected');
-  
   let id = viewId++;
   views[id] = socket;
 

@@ -88,7 +88,7 @@ var _ = require('lodash'),
 var _width = null,
     _height = null,
     _dirtyTiles = [],
-    _repaint = false,
+    _repaint = true,
     _initialized = false,
     _mapCanvas = null,
     _charCanvas = null;
@@ -97,7 +97,6 @@ function generate(width, height) {
   var canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  canvas['class'] = 'game-canvas';
 
   document.getElementById('canvas-container').appendChild(canvas);
 
@@ -113,26 +112,39 @@ function clear() {
   _charCanvas.clearRect(0, 0, _width, _height);
 }
 
-function drawSprite(sprite, frame, coords) {
-  _charCanvas.drawImage(sprite.image, frame.x * sprite.width, frame.y * sprite.height, sprite.width, sprite.height, coords.x, coords.y, sprite.width, sprite.height);
+function drawMap() {
+  if (!_initialized) return;
+  if (_repaint) return redrawMap();
+
+  // Draw dirty zones
+  _dirtyTiles.forEach(function (tile) {
+    var newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
+    drawTile(dirtyTile.x, dirtyTile.y, newTile);
+  });
+
+  _dirtyTiles = [];
+}
+
+function drawSprite(sprite, dx, dy, x, y) {
+  _charCanvas.drawImage(sprite.image, dx, dy, sprite.width, sprite.height, x * sprite.width, y * sprite.height, sprite.width, sprite.height);
 }
 
 function drawPlayer(plr) {
   var sprite = Sprites.player(plr.character),
       x = Math.round(plr.x * C.SQUARE_SIZE) - C.CHAR_X,
       y = Math.round(plr.y * C.SQUARE_SIZE) - C.CHAR_Y;
-
-  var frame = Math.floor(player.frame / C.MOVE_ANIM_SPEED),
+  debugger;
+  var frame = Math.floor(plr.frame / C.MOVE_ANIM_SPEED),
       frameX = undefined,
       frameY = undefined;
 
   // Tile coordinates
-  if (player.alive) {
+  if (plr.alive) {
     frameX = frame % 3;
-    if (!player.moving) {
+    if (!plr.moving) {
       frameX = 1;
     }
-    frameY = player.getDirectionFrame();
+    frameY = plr.getDirectionFrame();
   } else {
     frameY = Math.floor(frame / 3) + 4;
     frameX = frame % 3;
@@ -163,12 +175,15 @@ function drawFlame(flame) {
   drawSprite(sprite, { x: frame, y: 0 }, { x: x, y: y });
 }
 
-function drawTile(xCoord, yCoord, tile) {
-  var sprite = Sprites.sprite('tile'),
-      x = xCoord * sprite.width,
-      y = xCoord * sprite.height;
+function drawTile(x, y, tile) {
+  var sprite = Sprites.sprite('tiles');
+  drawSprite(sprite, tile.value * sprite.width, 0, x, y);
 
-  drawSprite(sprite, { x: frame, y: 0 }, { x: x, y: y });
+  //x       = xCoord * sprite.width,
+  //y       = xCoord * sprite.height,
+  //frame   = Map.getTile(xCoord, yCoord).value;
+
+  //drawSprite(sprite, { x: frame * sprite.width, y: 0 }, { x: x, y: y });
 }
 
 function redrawMap() {
@@ -184,19 +199,6 @@ function redrawMap() {
   _repaint = false;
 }
 
-function drawMap() {
-  if (!_initialized) return;
-  if (_repaint) return redrawMap();
-
-  // Draw dirty zones
-  _dirtyTiles.forEach(function (tile) {
-    var newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
-    drawTile(dirtyTile.x, dirtyTile.y, newTile);
-  });
-
-  _dirtyTiles = [];
-}
-
 function addDirtyZone(x, y) {
   _dirtyTiles.push({ x: Math.floor(x), y: Math.floor(y) });
 }
@@ -209,18 +211,19 @@ module.exports = {
     _mapCanvas = generate(_width, _height).getContext('2d');
     _charCanvas = generate(_width, _height).getContext('2d');
     Sprites.init().then(function () {
-      return initialze();
+      return initialize();
     });
   },
 
   update: function update(players, bombs, flames) {
     if (!_initialized) return;
 
-    clear();
+    //clear();
 
     _.forEach(players, drawPlayer);
     _.forEach(bombs, drawBomb);
     _.forEach(flames, drawFlame);
+    drawMap();
   },
 
   addDirtyTiles: function addDirtyTiles(tiles) {
@@ -351,7 +354,6 @@ var Game = {
     });
 
     Canvas.update(_players, _bombs, _flames);
-    Canvas.drawMap();
     Leaderboard.reload(_players);
 
     _lastTick = now;
@@ -398,6 +400,7 @@ var Game = {
   },
 
   playerUpdate: function playerUpdate(data) {
+    debugger;
     var plr = data.player,
         message = null;
 
@@ -499,8 +502,8 @@ var Map = {
     _tiles = opts.tiles;
   },
 
-  getTile: function getTile(xCoord, yCoord) {
-    return _tiles[yCoord * _width + xCoord];
+  getTile: function getTile(x, y) {
+    return _tiles[y * _width + x];
   },
 
   getBounds: function getBounds() {
@@ -610,24 +613,22 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var _spriteDir = '../../sprites/',
     C = require('./constants');
 
-function loadSprite(path, callback) {
-  var sprite = new Image();
-  sprite.src = _spriteDir + path;
-  sprite.onload = callback;
-  return sprite;
+function loadSprite(path, sprite) {
+  var img = new Image();
+  img.src = _spriteDir + path;
+  img.onload = function () {
+    sprite.loaded = true;
+  };
+  return img;
 }
 
 var Sprite = function Sprite(src, charFlag) {
-  var _this = this;
-
   _classCallCheck(this, Sprite);
 
-  this.image = loadSprite(src, function () {
-    return _this.loaded = true;
-  });
+  this.loaded = false;
+  this.image = loadSprite(src, this);
   this.width = charFlag ? C.CHAR_WIDTH : C.SQUARE_SIZE;
   this.height = charFlag ? C.CHAR_HEIGHT : C.SQUARE_SIZE;
-  this.loaded = false;
 };
 
 module.exports = Sprite;
@@ -644,45 +645,43 @@ var _sprites = {
   characters: {},
   flame: null,
   bomb: null,
-  tile: null
+  tiles: null
 },
-    _onDoneCallback = null,
-    _spritesToLoad = 7,
     _spritesLoaded = false;
 
 function spriteLoading(sprite) {
   if (sprite instanceof Sprite) return !sprite.loaded;
-
-  return _.filter(sprite, spriteLoading);
+  return !_.isEmpty(_.filter(sprite, spriteLoading));
 }
 
 function spriteCheck() {
   _spritesLoaded = _.isEmpty(_.filter(_sprites, spriteLoading));
+  return _spritesLoaded;
 }
 
-function loadSprites() {
+function loadSprites(fn) {
   spriteNames.forEach(function (name) {
     _sprites.characters[name] = new Sprite('char-' + name + '.png', true);
   });
+
   _sprites.flame = new Sprite('flames.png');
-  _sprites.bomb = new Sprite('flames.png');
-  _sprites.tile = new Sprite('flames.png');
+  _sprites.bomb = new Sprite('bombs.png');
+  _sprites.tiles = new Sprite('tiles.png');
 
-  return new Promise(function (resolve, reject) {
-    setInterval(spriteCheck, 500);
-
-    // TODO: Reject on timeout
-    if (_spritesLoaded) resolve();
-  });
+  var interval = setInterval(function () {
+    console.log('check');
+    if (spriteCheck()) {
+      fn.call();
+      clearInterval(interval);
+    }
+  }, 500);
 }
 
 module.exports = {
 
   init: function init() {
-    return loadSprites().then(function () {
-      return new Promise(function (resolve, reject) {
-        return resolve();
-      });
+    return new Promise(function (resolve, reject) {
+      loadSprites(resolve);
     });
   },
 
@@ -691,7 +690,7 @@ module.exports = {
   },
 
   sprite: function sprite(type) {
-    _sprites[type];
+    return _sprites[type];
   }
 
 };

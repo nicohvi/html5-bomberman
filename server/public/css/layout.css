@@ -5,13 +5,14 @@ body {
 
 h1 { text-align: center; }
 
-.game-canvas {
-  position: absolute;
-}
-
 #canvas-container {
   width: 800px;
   margin: 0 auto;
+  position: relative;
+}
+
+canvas {
+  position: absolute;
 }
 
 canvas:first-of-type {

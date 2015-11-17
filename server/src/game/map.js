@@ -7,7 +7,7 @@ const _ = require('lodash'),
 
 let _width = null,
     _height = null,
-    _map = null,
+    _tiles = null,
     _dirtyTiles = [];
 
 function checkBounds (x, y) {
@@ -16,7 +16,7 @@ function checkBounds (x, y) {
 
 function setTile (tile, newValue) {
   let value = newValue || tile.value;
-  _map[tile.y * _width + tile.x] = value;
+  _tiles[tile.y * _width + tile.x] = value;
 }
 
 module.exports = {
@@ -26,7 +26,7 @@ module.exports = {
     _width  = opts.width || C.MAP_WIDTH;
     _height = opts.height || C.MAP_HEIGHT;
 
-    _map = MapGenerator.generate(_width, _height);
+    _tiles = MapGenerator.generate(_width, _height);
   },
 
   getXTiles (xRange, y) {
@@ -75,11 +75,11 @@ module.exports = {
     x = Math.floor(x);
     y = Math.floor(y);
 
-    return _map[y * _width + x];
+    return _tiles[y * _width + x];
   },
 
   get () {
-    return _map;
+    return { width: _width, height: _height, tiles: _tiles };
   }
 
 };

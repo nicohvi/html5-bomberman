@@ -12,8 +12,8 @@ let Map = {
     _tiles  = opts.tiles;
   },
 
-  getTile (xCoord, yCoord) {
-    return _tiles[yCoord * _width + xCoord]; 
+  getTile (x, y) {
+    return _tiles[y * _width + x]; 
   },
 
   getBounds () {

@@ -60,7 +60,6 @@ let Game = {
     _.each(_flames, flame => flame.animationUpdate.call(flame, delta));
     
     Canvas.update(_players, _bombs, _flames);
-    Canvas.drawMap();
     Leaderboard.reload(_players);
 
     _lastTick = now;
@@ -105,6 +104,7 @@ let Game = {
   },
 
   playerUpdate (data) {
+    debugger
     let plr = data.player,
         message = null;
 

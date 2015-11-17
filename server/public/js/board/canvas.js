@@ -8,7 +8,7 @@ const _   = require('lodash'),
 let _width = null,
     _height = null,
     _dirtyTiles = [],
-    _repaint = false,
+    _repaint = true,
     _initialized = false,
     _mapCanvas = null,
     _charCanvas = null;
@@ -17,7 +17,6 @@ function generate(width, height) {
     let canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
-    canvas.class = 'game-canvas';
 
     document.getElementById('canvas-container').appendChild(canvas);
 
@@ -33,9 +32,22 @@ function clear () {
   _charCanvas.clearRect(0, 0, _width, _height);
 }
 
-function drawSprite (sprite, frame, coords) {
-  _charCanvas.drawImage(sprite.image, frame.x * sprite.width, frame.y * sprite.height,
-  sprite.width, sprite.height, coords.x, coords.y,
+function drawMap () {
+  if(!_initialized) return; 
+  if(_repaint) return redrawMap();
+  
+  // Draw dirty zones
+  _dirtyTiles.forEach(tile => {
+    const newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
+    drawTile(dirtyTile.x, dirtyTile.y, newTile);
+  });
+
+  _dirtyTiles = [];
+}
+
+function drawSprite(sprite, dx, dy, x, y) {
+  _charCanvas.drawImage(sprite.image, dx, dy, 
+  sprite.width, sprite.height, x*sprite.width, y*sprite.height,
   sprite.width, sprite.height);
 }
 
@@ -43,15 +55,15 @@ function drawPlayer (plr) {
   const sprite  = Sprites.player(plr.character),
             x   = Math.round(plr.x * C.SQUARE_SIZE) - C.CHAR_X,
             y   = Math.round(plr.y * C.SQUARE_SIZE) - C.CHAR_Y;
-
-  let frame = Math.floor(player.frame / C.MOVE_ANIM_SPEED),
+  debugger
+  let frame = Math.floor(plr.frame / C.MOVE_ANIM_SPEED),
       frameX, frameY;
 
   // Tile coordinates
-  if(player.alive) {
+  if(plr.alive) {
     frameX = frame % 3;
-    if(!player.moving) { frameX = 1; }
-    frameY = player.getDirectionFrame();
+    if(!plr.moving) { frameX = 1; }
+    frameY = plr.getDirectionFrame();
   } else {
     frameY = Math.floor(frame/3) + 4;
     frameX = frame % 3;
@@ -83,12 +95,15 @@ function drawFlame (flame) {
   drawSprite(sprite, { x: frame, y: 0 }, { x: x, y: y });
 }
 
-function drawTile (xCoord, yCoord, tile) {
-  const sprite  = Sprites.sprite('tile'),
-        x       = xCoord * sprite.width,
-        y       = xCoord * sprite.height;
+function drawTile (x, y, tile) {
+  const sprite  = Sprites.sprite('tiles');
+  drawSprite(sprite, tile.value * sprite.width, 0, x, y); 
 
-  drawSprite(sprite, { x: frame, y: 0 }, { x: x, y: y });
+        //x       = xCoord * sprite.width,
+        //y       = xCoord * sprite.height,
+        //frame   = Map.getTile(xCoord, yCoord).value;
+
+  //drawSprite(sprite, { x: frame * sprite.width, y: 0 }, { x: x, y: y });
 }
 
 function  redrawMap () {
@@ -103,19 +118,6 @@ function  redrawMap () {
   _repaint = false;
 }
 
-function drawMap () {
-  if(!_initialized) return; 
-  if(_repaint) return redrawMap();
-  
-  // Draw dirty zones
-  _dirtyTiles.forEach(tile => {
-    const newTile = Map.getTile(dirtyTile.x, dirtyTile.y);
-    drawTile(dirtyTile.x, dirtyTile.y, newTile);
-  });
-
-  _dirtyTiles = [];
-}
-
 function addDirtyZone (x, y) {
  _dirtyTiles.push({x: Math.floor(x), y: Math.floor(y) });
 }
@@ -127,20 +129,20 @@ module.exports = {
     _height = map.height * C.SQUARE_SIZE;
     _mapCanvas  = generate(_width, _height).getContext('2d');
     _charCanvas = generate(_width, _height).getContext('2d');
-    Sprites.init().then( () => initialze());
+    Sprites.init().then(() => initialize());
   },
 
   update (players, bombs, flames) {
     if(!_initialized) return;
 
-    clear();
+    //clear();
 
     _.forEach(players, drawPlayer);
     _.forEach(bombs, drawBomb);
     _.forEach(flames, drawFlame);
+    drawMap();
   },
-
-    
+   
   addDirtyTiles (tiles) {
     _.each(tiles, tile => {
       const x = Math.floor(tile.x),
@@ -150,4 +152,4 @@ module.exports = {
     });
   },
 
-  };
+};
